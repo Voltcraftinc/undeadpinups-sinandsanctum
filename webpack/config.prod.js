@@ -65,10 +65,10 @@ module.exports = {
         }),
         new CopyPlugin({
             patterns: [
-                { from: path.resolve(__dirname, '../public/assets'), to: './assets' }, // Ensure "./" for relative path in dist
-                { from: path.resolve(__dirname, '../public/favicon.png'), to: './favicon.png' },
-                { from: path.resolve(__dirname, '../public/style.css'), to: './style.css' },
- 
+                // Ensure public assets are copied to dist folder
+                { from: path.resolve(__dirname, "../public/assets"), to: "./assets" },
+                { from: path.resolve(__dirname, "../public/favicon.png"), to: "./favicon.png" },
+                { from: path.resolve(__dirname, "../public/style.css"), to: "./style.css" },
             ],
         }),
     ],

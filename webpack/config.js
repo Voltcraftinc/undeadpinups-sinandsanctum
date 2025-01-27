@@ -33,7 +33,7 @@ module.exports = {
     },
     plugins: [
         new CleanWebpackPlugin({
-            cleanOnceBeforeBuildPatterns: [path.join(__dirname, "dist/**/*")],
+            cleanOnceBeforeBuildPatterns: [path.join(__dirname, "../dist/**/*")],
         }),
         new webpack.DefinePlugin({
             "typeof CANVAS_RENDERER": JSON.stringify(true),
@@ -45,15 +45,15 @@ module.exports = {
         }),
         new CopyPlugin({
             patterns: [
-                { from: path.resolve(__dirname, "public/assets"), to: "assets" },
-                { from: path.resolve(__dirname, "public/style.css"), to: "style.css" },
-                { from: path.resolve(__dirname, "public/favicon.png"), to: "favicon.png" },
+                { from: path.resolve(__dirname, "../public/assets"), to: "assets" },
+                { from: path.resolve(__dirname, "../public/style.css"), to: "style.css" },
+                { from: path.resolve(__dirname, "../public/favicon.png"), to: "favicon.png" },
             ],
         }),
     ],
     devServer: {
         static: {
-            directory: path.resolve(__dirname, "public"),
+            directory: path.resolve(process.cwd(), "public"),
         },
         compress: true,
         port: 9000,

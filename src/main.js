@@ -1,11 +1,9 @@
+import Phaser from 'phaser';
 import { Boot } from './scenes/Boot';
 import { Preloader } from './scenes/Preloader';
 import { MainMenu } from './scenes/MainMenu';
 import { Game } from './scenes/Game';
 import { Freelance } from './scenes/Freelance';
-
-import Phaser from 'phaser';
-
 
 const config = {
     type: Phaser.AUTO,
@@ -18,7 +16,9 @@ const config = {
             debug: false,
         },
     },
-    scene: [Boot, Preloader, MainMenu, Game, Freelance], // Include all scenes
+    scene: [Boot, Preloader, MainMenu, Game, Freelance],
 };
 
-const game = new Phaser.Game(config);
+if (!window.game) {
+    window.game = new Phaser.Game(config);
+}

@@ -12,7 +12,6 @@ export class Freelance extends Scene {
         this.load.image('industryWork', 'assets/industrywork.png'); // Switch button for freelance.js
         this.load.image('backToMenu', 'assets/backToMenu.png'); // Load main menu button
 
-
         // Load all freelance JPG images
         for (let i = 1; i <= 38; i++) {
             this.load.image(`freelance${i}`, `assets/freelance(${i}).jpg`);
@@ -25,61 +24,59 @@ export class Freelance extends Scene {
             .setOrigin(0)
             .setScrollFactor(0);
 
+        // Add back to menu button
+        if (this.textures.exists('backToMenu')) {
             this.backToMenuButton = this.add.image(120, this.scale.height - 60, 'backToMenu')
-            .setInteractive()
-            .setScrollFactor(0) // Keep the button fixed relative to the camera
-            .on('pointerdown', () => this.scene.start('MainMenu'));
-        
-        // Ensure the button stays in place during screen resizing
-        this.scale.on('resize', (gameSize) => {
-            const { height } = gameSize; // Get updated height
-            this.backToMenuButton.setPosition(120, height - 60); // Adjust position dynamically
-        });
-        
-        
-        // Make sure the button stays in place during screen resizing
-        this.scale.on('resize', (gameSize) => {
-            const { height } = gameSize; // Get updated height
-            this.backToMenuButton.setPosition(120, height - 60); // Adjust position dynamically
-        });
-        
+                .setInteractive()
+                .setScrollFactor(0) // Keep the button fixed relative to the camera
+                .on('pointerdown', () => this.scene.start('MainMenu'));
 
-
+            // Adjust button position on screen resize
+            this.scale.on('resize', (gameSize) => {
+                const { height } = gameSize;
+                this.backToMenuButton.setPosition(120, height - 60);
+            });
+        } else {
+            console.error('Asset "backToMenu" not found');
+        }
 
         // Add mute button
-        this.muteButton.on('pointerdown', () => {
-            const music = this.sound.get('backgroundMusic');
-            if (music) {
-                if (music.isPlaying) {
-                    music.pause();
-                } else {
-                    music.resume();
-                }
-            }
-        });
-        
-        this.switchButton.on('pointerdown', () => {
-            this.scene.start('Game');
-        });
+        if (this.textures.exists('muteButton')) {
+            this.muteButton = this.add.image(this.scale.width - 50, 50, 'muteButton')
+                .setScale(0.2)
+                .setInteractive()
+                .setScrollFactor(0)
+                .on('pointerdown', () => {
+                    const music = this.sound.get('backgroundMusic');
+                    if (music) {
+                        music.isPlaying ? music.pause() : music.resume();
+                    }
+                });
+        } else {
+            console.error('Asset "muteButton" not found');
+        }
 
         // Add switch button
-        this.switchButton = this.add.image(this.scale.width - 100, this.scale.height - 80, 'industryWork')
-            .setScale(0.2)
-            .setInteractive()
-            .setScrollFactor(0);
-        this.switchButton.on('pointerdown', () => {
-            const music = this.sound.get('backgroundMusic');
-            if (music) {
-                music.stop();
-                music.destroy();
-            }
-            this.scene.start('Game'); // Switch back to Game scene
-        });
+        if (this.textures.exists('industryWork')) {
+            this.switchButton = this.add.image(this.scale.width - 100, this.scale.height - 80, 'industryWork')
+                .setScale(0.2)
+                .setInteractive()
+                .setScrollFactor(0)
+                .on('pointerdown', () => {
+                    const music = this.sound.get('backgroundMusic');
+                    if (music) {
+                        music.stop();
+                        music.destroy();
+                    }
+                    this.scene.start('Game');
+                });
+        } else {
+            console.error('Asset "industryWork" not found');
+        }
 
         // Add character
         this.character = this.physics.add.sprite(this.scale.width / 2, this.scale.height - 150, 'character');
-        this.character.setScale(0.5);
-        this.character.setCollideWorldBounds(true);
+        this.character.setScale(0.5).setCollideWorldBounds(true);
 
         // Floating hover animation for the character
         this.tweens.add({
@@ -107,34 +104,35 @@ export class Freelance extends Scene {
         let currentX = 300;
 
         designs.forEach((key) => {
-            const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setInteractive();
+            if (this.textures.exists(key)) {
+                const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setInteractive();
 
-            // Dynamically set display size while maintaining aspect ratio
-            const maxWidth = 300; // Maximum width
-            const maxHeight = 300; // Maximum height
-            const aspectRatio = img.width / img.height;
+                // Dynamically set display size while maintaining aspect ratio
+                const maxWidth = 300;
+                const maxHeight = 300;
 
-            if (aspectRatio > 1) {
-                // Landscape-oriented image
-                img.setDisplaySize(maxWidth, maxWidth / aspectRatio);
+                if (img.width / img.height > 1) {
+                    img.setDisplaySize(maxWidth, maxWidth / (img.width / img.height));
+                } else {
+                    img.setDisplaySize(maxHeight * (img.width / img.height), maxHeight);
+                }
+
+                this.addHoverZoom(img, 1.2, 200); // Add hover zoom effect
+
+                // Floating animation
+                this.tweens.add({
+                    targets: img,
+                    y: img.y + 15,
+                    yoyo: true,
+                    repeat: -1,
+                    duration: Phaser.Math.Between(2000, 4000),
+                });
+
+                this.portfolioGroup.push(img);
+                currentX += img.displayWidth + 50; // Adjust spacing dynamically
             } else {
-                // Portrait-oriented or square image
-                img.setDisplaySize(maxHeight * aspectRatio, maxHeight);
+                console.error(`Asset "${key}" not found`);
             }
-
-            this.addHoverZoom(img, 1.2, 200); // Add hover zoom effect
-
-            // Floating animation
-            this.tweens.add({
-                targets: img,
-                y: img.y + 15,
-                yoyo: true,
-                repeat: -1,
-                duration: Phaser.Math.Between(2000, 4000),
-            });
-
-            this.portfolioGroup.push(img);
-            currentX += img.displayWidth + 50; // Adjust spacing dynamically
         });
 
         this.totalDesignWidth = currentX;

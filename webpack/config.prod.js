@@ -17,6 +17,9 @@ module.exports = {
         maxEntrypointSize: 2500000,
         maxAssetSize: 1200000,
     },
+    externals: {
+        phaser: "Phaser", // Ensures Phaser is bundled correctly
+    },
     module: {
         rules: [
             {
@@ -60,9 +63,9 @@ module.exports = {
         }),
         new CopyPlugin({
             patterns: [
-                { from: path.resolve(__dirname, '../public/assets'), to: 'assets' },
-                { from: path.resolve(__dirname, '../public/style.css'), to: 'style.css' },
-                { from: path.resolve(__dirname, '../public/favicon.png'), to: 'favicon.png' },
+                { from: path.resolve(__dirname, "../public/assets"), to: "assets" },
+                { from: path.resolve(__dirname, "../public/style.css"), to: "style.css" },
+                { from: path.resolve(__dirname, "../public/favicon.png"), to: "favicon.png" },
             ],
         }),
     ],

@@ -1,24 +1,19 @@
 import { Scene } from 'phaser';
 
-export class Game extends Scene {
+export class Freelance extends Scene {
     constructor() {
-        super('Game');
+        super('Freelance');
     }
 
     preload() {
         this.load.image('background', 'assets/streetdesign.png');
         this.load.image('character', 'assets/charactersprite.png');
-        this.load.audio('backgroundMusic', 'assets/starlighthollow-mellow.mp3');
         this.load.image('muteButton', 'assets/mute.png');
-        this.load.image('switchButton', 'assets/freelance.png'); // Switch button for freelance.js
+        this.load.image('industryWork', 'assets/industrywork.png'); // Switch button for freelance.js
 
-        // Load all portfolio images (barsandvenues)
-        for (let i = 1; i <= 135; i++) {
-            this.load.image(`barsandvenues${i}`, `assets/barsandvenues(${i}).jpg`);
-        }
-        // Load PNG variations
-        for (let i = 1; i <= 5; i++) {
-            this.load.image(`barsandvenues-png${i}`, `assets/barsandvenues(${i}).png`);
+        // Load all freelance JPG images
+        for (let i = 1; i <= 38; i++) {
+            this.load.image(`freelance${i}`, `assets/freelance(${i}).jpg`);
         }
     }
 
@@ -28,33 +23,32 @@ export class Game extends Scene {
             .setOrigin(0)
             .setScrollFactor(0);
 
-        // Play background music (destroy when leaving)
-        if (!this.sound.get('backgroundMusic')) {
-            this.music = this.sound.add('backgroundMusic', { loop: true });
-            this.music.play();
-        }
-
         // Add mute button
         this.muteButton = this.add.image(this.scale.width - 50, 50, 'muteButton')
             .setScale(0.2)
             .setInteractive()
             .setScrollFactor(0);
         this.muteButton.on('pointerdown', () => {
-            if (this.music.isPlaying) {
-                this.music.pause();
-            } else {
-                this.music.resume();
+            const music = this.sound.get('backgroundMusic');
+            if (music && music.isPlaying) {
+                music.pause();
+            } else if (music) {
+                music.resume();
             }
         });
 
         // Add switch button
-        this.switchButton = this.add.image(this.scale.width - 100, this.scale.height - 80, 'switchButton')
+        this.switchButton = this.add.image(this.scale.width - 100, this.scale.height - 80, 'industryWork')
             .setScale(0.2)
             .setInteractive()
             .setScrollFactor(0);
         this.switchButton.on('pointerdown', () => {
-            this.music.stop(); // Stop music before switching
-            this.scene.start('Freelance');
+            const music = this.sound.get('backgroundMusic');
+            if (music) {
+                music.stop();
+                music.destroy();
+            }
+            this.scene.start('Game'); // Switch back to Game scene
         });
 
         // Add character
@@ -62,7 +56,7 @@ export class Game extends Scene {
         this.character.setScale(0.5);
         this.character.setCollideWorldBounds(true);
 
-        // Floating hover animation
+        // Floating hover animation for the character
         this.tweens.add({
             targets: this.character,
             y: this.character.y - 10,
@@ -71,7 +65,7 @@ export class Game extends Scene {
             duration: 800,
         });
 
-        // Enable keyboard controls
+        // Enable cursor keys and A/D keys
         this.cursors = this.input.keyboard.addKeys({
             left: Phaser.Input.Keyboard.KeyCodes.LEFT,
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
@@ -79,18 +73,33 @@ export class Game extends Scene {
             D: Phaser.Input.Keyboard.KeyCodes.D,
         });
 
-        // Load portfolio images
-        const designs = Phaser.Utils.Array.Shuffle([
-            ...Array.from({ length: 135 }, (_, i) => `barsandvenues${i + 1}`),
-            ...Array.from({ length: 5 }, (_, i) => `barsandvenues-png${i + 1}`),
-        ]);
+        // Create and randomise the freelance assets
+        const designs = Phaser.Utils.Array.Shuffle(
+            Array.from({ length: 38 }, (_, i) => `freelance${i + 1}`)
+        );
 
         this.portfolioGroup = [];
         let currentX = 300;
 
         designs.forEach((key) => {
-            const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setScale(0.5).setInteractive();
-            this.addHoverZoom(img, 1.2, 200);
+            const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setInteractive();
+
+            // Dynamically set display size while maintaining aspect ratio
+            const maxWidth = 300; // Maximum width
+            const maxHeight = 400; // Maximum height
+            const aspectRatio = img.width / img.height;
+
+            if (aspectRatio > 1) {
+                // Landscape-oriented image
+                img.setDisplaySize(maxWidth, maxWidth / aspectRatio);
+            } else {
+                // Portrait-oriented or square image
+                img.setDisplaySize(maxHeight * aspectRatio, maxHeight);
+            }
+
+            this.addHoverZoom(img, 1.2, 200); // Add hover zoom effect
+
+            // Floating animation
             this.tweens.add({
                 targets: img,
                 y: img.y + 15,
@@ -98,8 +107,9 @@ export class Game extends Scene {
                 repeat: -1,
                 duration: Phaser.Math.Between(2000, 4000),
             });
+
             this.portfolioGroup.push(img);
-            currentX += img.width * 0.3 + 200;
+            currentX += img.displayWidth + 50; // Adjust spacing dynamically
         });
 
         this.totalDesignWidth = currentX;
@@ -136,6 +146,7 @@ export class Game extends Scene {
                 duration: duration,
             });
         });
+
         target.on('pointerout', () => {
             this.tweens.add({
                 targets: target,

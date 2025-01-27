@@ -4,6 +4,9 @@ import { MainMenu } from './scenes/MainMenu';
 import { Game } from './scenes/Game';
 import { Freelance } from './scenes/Freelance';
 
+import Phaser from 'phaser';
+
+
 const config = {
     type: Phaser.AUTO,
     width: 1024,

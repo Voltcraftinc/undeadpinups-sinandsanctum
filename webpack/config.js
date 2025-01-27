@@ -1,5 +1,6 @@
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const CopyPlugin = require("copy-webpack-plugin");
 const path = require("path");
 const webpack = require("webpack");
 
@@ -8,8 +9,8 @@ module.exports = {
     devtool: "eval-source-map",
     entry: "./src/main.js",
     output: {
-        path: path.resolve(process.cwd(), 'dist'),
-        filename: "bundle.min.js"
+        path: path.resolve(process.cwd(), "dist"),
+        filename: "bundle.min.js",
     },
     module: {
         rules: [
@@ -17,35 +18,46 @@ module.exports = {
                 test: /\.js$/,
                 exclude: /node_modules/,
                 use: {
-                    loader: "babel-loader"
-                }
+                    loader: "babel-loader",
+                },
             },
             {
                 test: [/\.vert$/, /\.frag$/],
-                use: "raw-loader"
+                use: "raw-loader",
             },
             {
                 test: /\.(gif|png|jpe?g|svg|xml|glsl)$/i,
-                use: "file-loader"
-            }
-        ]
+                use: "file-loader",
+            },
+        ],
     },
     plugins: [
         new CleanWebpackPlugin({
-            cleanOnceBeforeBuildPatterns: [path.join(__dirname, "dist/**/*")]
+            cleanOnceBeforeBuildPatterns: [path.join(__dirname, "dist/**/*")],
         }),
         new webpack.DefinePlugin({
             "typeof CANVAS_RENDERER": JSON.stringify(true),
             "typeof WEBGL_RENDERER": JSON.stringify(true),
-            "typeof WEBGL_DEBUG": JSON.stringify(true),
-            "typeof EXPERIMENTAL": JSON.stringify(true),
-            "typeof PLUGIN_3D": JSON.stringify(false),
-            "typeof PLUGIN_CAMERA3D": JSON.stringify(false),
-            "typeof PLUGIN_FBINSTANT": JSON.stringify(false),
-            "typeof FEATURE_SOUND": JSON.stringify(true)
+            "typeof FEATURE_SOUND": JSON.stringify(true),
         }),
         new HtmlWebpackPlugin({
-            template: "./index.html"
-        })
-    ]
+            template: "./index.html",
+        }),
+        new CopyPlugin({
+            patterns: [
+                { from: path.resolve(__dirname, "public/assets"), to: "assets" },
+                { from: path.resolve(__dirname, "public/style.css"), to: "style.css" },
+                { from: path.resolve(__dirname, "public/favicon.png"), to: "favicon.png" },
+            ],
+        }),
+    ],
+    devServer: {
+        static: {
+            directory: path.resolve(__dirname, "public"),
+        },
+        compress: true,
+        port: 9000,
+        hot: true,
+        open: true,
+    },
 };

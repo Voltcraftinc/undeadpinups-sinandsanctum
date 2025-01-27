@@ -1,8 +1,8 @@
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const path = require("path");
 const TerserPlugin = require("terser-webpack-plugin");
+const path = require("path");
 const webpack = require("webpack");
 
 module.exports = {
@@ -10,7 +10,7 @@ module.exports = {
     entry: "./src/main.js",
     output: {
         path: path.resolve(process.cwd(), "dist"),
-        filename: "bundle.min.js", // Ensures the JS bundle is in dist/
+        filename: "bundle.min.js",
     },
     devtool: false,
     performance: {
@@ -52,23 +52,17 @@ module.exports = {
         new webpack.DefinePlugin({
             "typeof CANVAS_RENDERER": JSON.stringify(true),
             "typeof WEBGL_RENDERER": JSON.stringify(true),
-            "typeof WEBGL_DEBUG": JSON.stringify(false),
-            "typeof EXPERIMENTAL": JSON.stringify(false),
-            "typeof PLUGIN_3D": JSON.stringify(false),
-            "typeof PLUGIN_CAMERA3D": JSON.stringify(false),
-            "typeof PLUGIN_FBINSTANT": JSON.stringify(false),
             "typeof FEATURE_SOUND": JSON.stringify(true),
         }),
         new HtmlWebpackPlugin({
             template: "./index.html",
-            inject: false,
+            inject: true,
         }),
         new CopyPlugin({
             patterns: [
-                // Ensure public assets are copied to dist folder
-                { from: path.resolve(__dirname, "../public/assets"), to: "./assets" },
-                { from: path.resolve(__dirname, "../public/favicon.png"), to: "./favicon.png" },
-                { from: path.resolve(__dirname, "../public/style.css"), to: "./style.css" },
+                { from: path.resolve(__dirname, '../public/assets'), to: './assets' },
+                { from: path.resolve(__dirname, '../public/style.css'), to: './style.css' },
+                { from: path.resolve(__dirname, '../public/favicon.png'), to: './favicon.png' },
             ],
         }),
     ],

@@ -8,7 +8,7 @@ export class Game extends Scene {
     preload() {
         this.load.image('background', 'assets/streetdesign.png');
         this.load.image('character', 'assets/charactersprite.png');
-        this.load.audio('backgroundMusic', 'assets/starlighthollow-mellow.mp3');
+        this.load.image('backToMenu', 'assets/backToMenu.png'); // Load main menu button
         this.load.image('muteButton', 'assets/mute.png');
         this.load.image('switchButton', 'assets/freelance.png'); // Switch button for freelance.js
 
@@ -28,11 +28,10 @@ export class Game extends Scene {
             .setOrigin(0)
             .setScrollFactor(0);
 
-        // Play background music (destroy when leaving)
-        if (!this.sound.get('backgroundMusic')) {
-            this.music = this.sound.add('backgroundMusic', { loop: true });
-            this.music.play();
-        }
+        this.backToMenuButton = this.add.image(120, this.scale.height - 60, 'backToMenu')
+            .setInteractive()
+            .setScrollFactor(0) // Keep the button fixed relative to the camera
+            .on('pointerdown', () => this.scene.start('MainMenu'));
 
         // Add mute button
         this.muteButton = this.add.image(this.scale.width - 50, 50, 'muteButton')
@@ -40,10 +39,13 @@ export class Game extends Scene {
             .setInteractive()
             .setScrollFactor(0);
         this.muteButton.on('pointerdown', () => {
-            if (this.music.isPlaying) {
-                this.music.pause();
-            } else {
-                this.music.resume();
+            const music = this.sound.get('backgroundMusic');
+            if (music) {
+                if (music.isPlaying) {
+                    music.pause();
+                } else {
+                    music.resume();
+                }
             }
         });
 
@@ -53,7 +55,6 @@ export class Game extends Scene {
             .setInteractive()
             .setScrollFactor(0);
         this.switchButton.on('pointerdown', () => {
-            this.music.stop(); // Stop music before switching
             this.scene.start('Freelance');
         });
 

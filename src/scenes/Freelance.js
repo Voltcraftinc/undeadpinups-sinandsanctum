@@ -10,6 +10,8 @@ export class Freelance extends Scene {
         this.load.image('character', 'assets/charactersprite.png');
         this.load.image('muteButton', 'assets/mute.png');
         this.load.image('industryWork', 'assets/industrywork.png'); // Switch button for freelance.js
+        this.load.image('backToMenu', 'assets/backToMenu.png'); // Load main menu button
+
 
         // Load all freelance JPG images
         for (let i = 1; i <= 38; i++) {
@@ -23,18 +25,41 @@ export class Freelance extends Scene {
             .setOrigin(0)
             .setScrollFactor(0);
 
-        // Add mute button
-        this.muteButton = this.add.image(this.scale.width - 50, 50, 'muteButton')
-            .setScale(0.2)
+            this.backToMenuButton = this.add.image(120, this.scale.height - 60, 'backToMenu')
             .setInteractive()
-            .setScrollFactor(0);
+            .setScrollFactor(0) // Keep the button fixed relative to the camera
+            .on('pointerdown', () => this.scene.start('MainMenu'));
+        
+        // Ensure the button stays in place during screen resizing
+        this.scale.on('resize', (gameSize) => {
+            const { height } = gameSize; // Get updated height
+            this.backToMenuButton.setPosition(120, height - 60); // Adjust position dynamically
+        });
+        
+        
+        // Make sure the button stays in place during screen resizing
+        this.scale.on('resize', (gameSize) => {
+            const { height } = gameSize; // Get updated height
+            this.backToMenuButton.setPosition(120, height - 60); // Adjust position dynamically
+        });
+        
+
+
+
+        // Add mute button
         this.muteButton.on('pointerdown', () => {
             const music = this.sound.get('backgroundMusic');
-            if (music && music.isPlaying) {
-                music.pause();
-            } else if (music) {
-                music.resume();
+            if (music) {
+                if (music.isPlaying) {
+                    music.pause();
+                } else {
+                    music.resume();
+                }
             }
+        });
+        
+        this.switchButton.on('pointerdown', () => {
+            this.scene.start('Game');
         });
 
         // Add switch button
@@ -86,7 +111,7 @@ export class Freelance extends Scene {
 
             // Dynamically set display size while maintaining aspect ratio
             const maxWidth = 300; // Maximum width
-            const maxHeight = 400; // Maximum height
+            const maxHeight = 300; // Maximum height
             const aspectRatio = img.width / img.height;
 
             if (aspectRatio > 1) {

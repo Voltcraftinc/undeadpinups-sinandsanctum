@@ -9,11 +9,13 @@ module.exports = {
     mode: "production",
     entry: "./src/main.js",
     output: {
-        path: path.resolve(__dirname, "../dist"),  // Ensuring Webpack outputs to correct directory
+        path: path.resolve(__dirname, "../dist"),
         filename: "bundle.min.js",
     },
-    externals: {
-        phaser: "Phaser",
+    resolve: {
+        alias: {
+            phaser: path.resolve(__dirname, "../node_modules/phaser"),
+        },
     },
     devtool: false,
     performance: {
@@ -58,9 +60,9 @@ module.exports = {
             "typeof FEATURE_SOUND": JSON.stringify(true),
         }),
         new HtmlWebpackPlugin({
-            template: path.resolve(__dirname, "../public/index.html"), // ✅ FIX THIS
-            filename: "index.html",  // ✅ Ensure output inside `dist/`
-            inject: true,
+            template: path.resolve(__dirname, "../public/index.html"),
+            filename: "index.html",
+            inject: "body",
         }),
         new CopyPlugin({
             patterns: [

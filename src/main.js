@@ -12,13 +12,10 @@ const config = {
     parent: 'game-container',
     physics: {
         default: 'arcade',
-        arcade: {
-            debug: false,
-        },
+        arcade: { debug: false },
     },
     scene: [Boot, Preloader, MainMenu, Game, Freelance],
 };
 
-if (!window.game) {
-    window.game = new Phaser.Game(config);
-}
+// REMOVE window.game CHECK – Just start Phaser normally
+new Phaser.Game(config);

@@ -9,16 +9,16 @@ module.exports = {
     mode: "production",
     entry: "./src/main.js",
     output: {
-        path: path.resolve(process.cwd(), "dist"),
+        path: path.resolve(__dirname, "../dist"),  // Ensuring correct path
         filename: "bundle.min.js",
+    },
+    externals: {
+        phaser: "Phaser", // Ensures Phaser is bundled correctly
     },
     devtool: false,
     performance: {
         maxEntrypointSize: 2500000,
         maxAssetSize: 1200000,
-    },
-    externals: {
-        phaser: "Phaser", // Ensures Phaser is bundled correctly
     },
     module: {
         rules: [
@@ -34,8 +34,8 @@ module.exports = {
                 use: "raw-loader",
             },
             {
-                test: /\.(gif|png|jpe?g|svg|xml|glsl)$/i,
-                use: "file-loader",
+                test: /\.(gif|png|jpe?g|svg|xml|glsl|woff|woff2|ttf|eot)$/i,
+                type: "asset/resource",
             },
         ],
     },
@@ -58,15 +58,14 @@ module.exports = {
             "typeof FEATURE_SOUND": JSON.stringify(true),
         }),
         new HtmlWebpackPlugin({
-            template: "./index.html",
+            template: "./public/index.html",
             inject: true,
         }),
         new CopyPlugin({
             patterns: [
-                { from: path.resolve(process.cwd(), 'public/assets'), to: 'assets' },
-                { from: path.resolve(process.cwd(), 'public/style.css'), to: 'style.css' },
-                { from: path.resolve(process.cwd(), 'public/favicon.png'), to: 'favicon.png' },
-        
+                { from: path.resolve(__dirname, "../public/assets"), to: "assets" },
+                { from: path.resolve(__dirname, "../public/favicon.png"), to: "favicon.png" },
+                { from: path.resolve(__dirname, "../public/style.css"), to: "style.css" },
             ],
         }),
     ],

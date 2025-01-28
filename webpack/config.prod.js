@@ -63,9 +63,10 @@ module.exports = {
         }),
         new CopyPlugin({
             patterns: [
-                { from: path.resolve(__dirname, "../public/assets"), to: "assets" },
-                { from: path.resolve(__dirname, "../public/style.css"), to: "style.css" },
-                { from: path.resolve(__dirname, "../public/favicon.png"), to: "favicon.png" },
+                { from: path.resolve(process.cwd(), 'public/assets'), to: 'assets' },
+                { from: path.resolve(process.cwd(), 'public/style.css'), to: 'style.css' },
+                { from: path.resolve(process.cwd(), 'public/favicon.png'), to: 'favicon.png' },
+        
             ],
         }),
     ],

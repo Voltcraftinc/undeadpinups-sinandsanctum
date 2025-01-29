@@ -30,7 +30,7 @@ export class Game extends Scene {
 
         this.backToMenuButton = this.add.image(120, this.scale.height - 60, 'backToMenu')
             .setInteractive()
-            .setScrollFactor(0) // Keep the button fixed relative to the camera
+            .setScrollFactor(0)
             .on('pointerdown', () => this.scene.start('MainMenu'));
 
         // Add mute button
@@ -58,10 +58,14 @@ export class Game extends Scene {
             this.scene.start('Freelance');
         });
 
-        // Add character
+        // **Add character with physics**
         this.character = this.physics.add.sprite(this.scale.width / 2, this.scale.height - 150, 'character');
-        this.character.setScale(0.5);
-        this.character.setCollideWorldBounds(true);
+        this.character.setScale(0.5).setCollideWorldBounds(true);
+        this.character.setGravityY(300); // Gravity for smooth hover effect
+        this.character.setBounce(0.2); // Slight bounce for realism
+
+        // **Set custom landing position**
+        this.landingY = this.scale.height - 150; // Defines where the character lands
 
         // Floating hover animation
         this.tweens.add({
@@ -72,7 +76,7 @@ export class Game extends Scene {
             duration: 800,
         });
 
-        // Enable keyboard controls
+        // **Enable movement controls**
         this.cursors = this.input.keyboard.addKeys({
             left: Phaser.Input.Keyboard.KeyCodes.LEFT,
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
@@ -80,7 +84,13 @@ export class Game extends Scene {
             D: Phaser.Input.Keyboard.KeyCodes.D,
         });
 
-        // Load portfolio images
+        // **Jump and Flip Controls**
+        this.jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.flipKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+        this.hasFlipped = false;
+        this.isJumping = false;
+
+        // **Load portfolio images**
         const designs = Phaser.Utils.Array.Shuffle([
             ...Array.from({ length: 135 }, (_, i) => `barsandvenues${i + 1}`),
             ...Array.from({ length: 5 }, (_, i) => `barsandvenues-png${i + 1}`),
@@ -110,21 +120,61 @@ export class Game extends Scene {
     }
 
     update() {
+        // **Left & Right Movement**
         if ((this.cursors.left.isDown || this.cursors.A.isDown) && this.character.x > this.scale.width / 2) {
-            this.character.setVelocityX(-200);
+            this.character.setVelocityX(-500);
             this.character.flipX = true;
             this.background.tilePositionX -= 2;
         } else if (this.cursors.right.isDown || this.cursors.D.isDown) {
-            this.character.setVelocityX(200);
+            this.character.setVelocityX(500);
             this.character.flipX = false;
             this.background.tilePositionX += 2;
         } else {
             this.character.setVelocityX(0);
         }
 
+        // **Jumping with Spacebar (Smooth Hoverboard Motion)**
+        if (Phaser.Input.Keyboard.JustDown(this.jumpKey) && !this.isJumping) {
+            this.isJumping = true;
+            this.hasFlipped = false;
+
+            // Apply smooth jump motion (tween up, then down)
+            this.tweens.add({
+                targets: this.character,
+                y: this.character.y - 150,
+                duration: 600,
+                ease: 'Quad.easeOut',
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: this.character,
+                        y: this.landingY,
+                        duration: 800,
+                        ease: 'Quad.easeIn',
+                        onComplete: () => {
+                            this.isJumping = false;
+                        }
+                    });
+                }
+            });
+        }
+
+        // **Backflip with F Key (only in the air & only once per jump)**
+        if (Phaser.Input.Keyboard.JustDown(this.flipKey) && this.isJumping && !this.hasFlipped) {
+            this.hasFlipped = true;
+            this.tweens.add({
+                targets: this.character,
+                angle: this.character.angle + 360,
+                duration: 600,
+                ease: 'Cubic.easeOut'
+            });
+        }
+
+        // **Ensure images remain visible**
         this.portfolioGroup.forEach((design) => {
             if (design.x < this.character.x - this.scale.width) {
                 design.x += this.totalDesignWidth;
+            } else if (design.x > this.character.x + this.scale.width) {
+                design.x -= this.totalDesignWidth;
             }
         });
     }

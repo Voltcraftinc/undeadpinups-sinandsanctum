@@ -60,10 +60,11 @@ module.exports = {
             "typeof FEATURE_SOUND": JSON.stringify(true),
         }),
         new HtmlWebpackPlugin({
-            template: path.resolve(__dirname, "../public/index.html"),
+            template: path.resolve(process.cwd(), "public/index.html"), // Ensures correct pathing
             filename: "index.html",
             inject: "body",
         }),
+        
         new CopyPlugin({
             patterns: [
                 { from: path.resolve(__dirname, "../public/assets"), to: "assets" },

@@ -41,7 +41,7 @@ module.exports = {
             "typeof FEATURE_SOUND": JSON.stringify(true),
         }),
         new HtmlWebpackPlugin({
-            template: "./index.html",
+            template: "./public/index.html", // Now correctly points to the moved file
         }),
         new CopyPlugin({
             patterns: [

@@ -13,7 +13,7 @@ export class Freelance extends Scene {
         this.load.image('backToMenu', 'assets/backToMenu.png'); // Load main menu button
 
         // Load all freelance JPG images
-        for (let i = 1; i <= 38; i++) {
+        for (let i = 1; i <= 70; i++) {
             this.load.image(`freelance${i}`, `assets/freelance(${i}).jpg`);
         }
     }
@@ -28,7 +28,7 @@ export class Freelance extends Scene {
         if (this.textures.exists('backToMenu')) {
             this.backToMenuButton = this.add.image(120, this.scale.height - 60, 'backToMenu')
                 .setInteractive()
-                .setScrollFactor(0) // Keep the button fixed relative to the camera
+                .setScrollFactor(0)
                 .on('pointerdown', () => this.scene.start('MainMenu'));
 
             // Adjust button position on screen resize
@@ -74,9 +74,14 @@ export class Freelance extends Scene {
             console.error('Asset "industryWork" not found');
         }
 
-        // Add character
+        // **Add character with physics**
         this.character = this.physics.add.sprite(this.scale.width / 2, this.scale.height - 150, 'character');
         this.character.setScale(0.5).setCollideWorldBounds(true);
+        this.character.setGravityY(300); // Gravity for smooth hover effect
+        this.character.setBounce(0.2); // Slight bounce for realism
+
+        // **Set custom landing position instead of a ground asset**
+        this.landingY = this.scale.height - 150; // Defines where the character lands
 
         // Floating hover animation for the character
         this.tweens.add({
@@ -87,7 +92,7 @@ export class Freelance extends Scene {
             duration: 800,
         });
 
-        // Enable cursor keys and A/D keys
+        // **Enable cursor keys and A/D keys for movement**
         this.cursors = this.input.keyboard.addKeys({
             left: Phaser.Input.Keyboard.KeyCodes.LEFT,
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
@@ -95,9 +100,15 @@ export class Freelance extends Scene {
             D: Phaser.Input.Keyboard.KeyCodes.D,
         });
 
-        // Create and randomise the freelance assets
+        // **Jump and Flip Controls**
+        this.jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.flipKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
+        this.hasFlipped = false; // Tracks if a flip has already been done in the air
+        this.isJumping = false; // Tracks if character is in the air
+
+        // **Create and randomise the freelance assets**
         const designs = Phaser.Utils.Array.Shuffle(
-            Array.from({ length: 38 }, (_, i) => `freelance${i + 1}`)
+            Array.from({ length: 70 }, (_, i) => `freelance${i + 1}`)
         );
 
         this.portfolioGroup = [];
@@ -108,8 +119,8 @@ export class Freelance extends Scene {
                 const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setInteractive();
 
                 // Dynamically set display size while maintaining aspect ratio
-                const maxWidth = 300;
-                const maxHeight = 300;
+                const maxWidth = 400;
+                const maxHeight = 400;
 
                 if (img.width / img.height > 1) {
                     img.setDisplaySize(maxWidth, maxWidth / (img.width / img.height));
@@ -117,7 +128,7 @@ export class Freelance extends Scene {
                     img.setDisplaySize(maxHeight * (img.width / img.height), maxHeight);
                 }
 
-                this.addHoverZoom(img, 1.2, 200); // Add hover zoom effect
+                this.addHoverZoom(img, 1.45, 200); // Add hover zoom effect
 
                 // Floating animation
                 this.tweens.add({
@@ -129,7 +140,7 @@ export class Freelance extends Scene {
                 });
 
                 this.portfolioGroup.push(img);
-                currentX += img.displayWidth + 50; // Adjust spacing dynamically
+                currentX += img.displayWidth + 80; // Adjust spacing dynamically
             } else {
                 console.error(`Asset "${key}" not found`);
             }
@@ -142,16 +153,64 @@ export class Freelance extends Scene {
     }
 
     update() {
+        // Left & Right Movement
         if ((this.cursors.left.isDown || this.cursors.A.isDown) && this.character.x > this.scale.width / 2) {
-            this.character.setVelocityX(-200);
+            this.character.setVelocityX(-500);
             this.character.flipX = true;
             this.background.tilePositionX -= 2;
         } else if (this.cursors.right.isDown || this.cursors.D.isDown) {
-            this.character.setVelocityX(200);
+            this.character.setVelocityX(500);
             this.character.flipX = false;
             this.background.tilePositionX += 2;
         } else {
             this.character.setVelocityX(0);
+        }
+
+        // **Ensure images remain visible**
+        this.portfolioGroup.forEach((design) => {
+            if (design.x < this.character.x - this.scale.width) {
+                design.x += this.totalDesignWidth; // Wraps the image back to the right
+            } else if (design.x > this.character.x + this.scale.width) {
+                design.x -= this.totalDesignWidth; // Wraps the image back to the left
+            }
+        });
+    
+
+        // Jumping with Spacebar (Smooth Hoverboard Motion)
+        if (Phaser.Input.Keyboard.JustDown(this.jumpKey) && !this.isJumping) {
+            this.isJumping = true; // Mark the character as in the air
+            this.hasFlipped = false; // Reset flip capability
+
+            // Apply smooth jump motion (tween up, then down)
+            this.tweens.add({
+                targets: this.character,
+                y: this.character.y - 150, // Smoothly jump up
+                duration: 600,
+                ease: 'Quad.easeOut',
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: this.character,
+                        y: this.landingY, // Smoothly fall back down
+                        duration: 800,
+                        ease: 'Quad.easeIn',
+                        onComplete: () => {
+                            this.isJumping = false; // Allow jumping again
+                        }
+                    });
+                }
+            });
+        
+        }
+
+        // Backflip with F Key (only in the air & only once per jump)
+        if (Phaser.Input.Keyboard.JustDown(this.flipKey) && this.isJumping && !this.hasFlipped) {
+            this.hasFlipped = true; // Prevent multiple flips in one jump
+            this.tweens.add({
+                targets: this.character,
+                angle: this.character.angle + 360, // Rotate fully
+                duration: 600, // Smooth flip animation
+                ease: 'Cubic.easeOut'
+            });
         }
 
         this.portfolioGroup.forEach((design) => {

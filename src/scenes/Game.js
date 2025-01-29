@@ -93,7 +93,7 @@ export class Game extends Scene {
         // **Load portfolio images**
         const designs = Phaser.Utils.Array.Shuffle([
             ...Array.from({ length: 135 }, (_, i) => `barsandvenues${i + 1}`),
-            ...Array.from({ length: 5 }, (_, i) => `barsandvenues-png${i + 1}`),
+            ...Array.from({ length: 63 }, (_, i) => `barsandvenues-png${i + 1}`),
         ]);
 
         this.portfolioGroup = [];

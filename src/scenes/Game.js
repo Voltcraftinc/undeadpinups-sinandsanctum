@@ -12,13 +12,10 @@ export class Game extends Scene {
         this.load.image('muteButton', 'assets/mute.png');
         this.load.image('switchButton', 'assets/freelance.png'); // Switch button for freelance.js
 
-        // Load all portfolio images (barsandvenues)
-        for (let i = 1; i <= 135; i++) {
+        // Load all barsandvenues JPG and PNG images
+        for (let i = 1; i <= 234; i++) {
             this.load.image(`barsandvenues${i}`, `assets/barsandvenues(${i}).jpg`);
-        }
-        // Load PNG variations
-        for (let i = 1; i <= 5; i++) {
-            this.load.image(`barsandvenues-png${i}`, `assets/barsandvenues(${i}).png`);
+            this.load.image(`barsandvenuesPNG${i}`, `assets/barsandvenues(${i}).png`); // PNG version
         }
     }
 
@@ -41,11 +38,7 @@ export class Game extends Scene {
         this.muteButton.on('pointerdown', () => {
             const music = this.sound.get('backgroundMusic');
             if (music) {
-                if (music.isPlaying) {
-                    music.pause();
-                } else {
-                    music.resume();
-                }
+                music.isPlaying ? music.pause() : music.resume();
             }
         });
 
@@ -90,27 +83,44 @@ export class Game extends Scene {
         this.hasFlipped = false;
         this.isJumping = false;
 
-        // **Load portfolio images**
-        const designs = Phaser.Utils.Array.Shuffle([
-            ...Array.from({ length: 135 }, (_, i) => `barsandvenues${i + 1}`),
-            ...Array.from({ length: 63 }, (_, i) => `barsandvenues-png${i + 1}`),
-        ]);
+        // **Load and randomise the barsandvenues assets**
+        const designs = Phaser.Utils.Array.Shuffle(
+            Array.from({ length: 234 }, (_, i) => [`barsandvenues${i + 1}`, `barsandvenuesPNG${i + 1}`]).flat()
+        );
 
         this.portfolioGroup = [];
         let currentX = 300;
 
         designs.forEach((key) => {
-            const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setScale(0.5).setInteractive();
-            this.addHoverZoom(img, 1.2, 200);
-            this.tweens.add({
-                targets: img,
-                y: img.y + 15,
-                yoyo: true,
-                repeat: -1,
-                duration: Phaser.Math.Between(2000, 4000),
-            });
-            this.portfolioGroup.push(img);
-            currentX += img.width * 0.3 + 200;
+            if (this.textures.exists(key)) {
+                const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setInteractive();
+
+                // Dynamically set display size while maintaining aspect ratio
+                const maxWidth = 400;
+                const maxHeight = 400;
+
+                if (img.width / img.height > 1) {
+                    img.setDisplaySize(maxWidth, maxWidth / (img.width / img.height));
+                } else {
+                    img.setDisplaySize(maxHeight * (img.width / img.height), maxHeight);
+                }
+
+                this.addHoverZoom(img, 1.2, 200);
+
+                // Floating animation
+                this.tweens.add({
+                    targets: img,
+                    y: img.y + 15,
+                    yoyo: true,
+                    repeat: -1,
+                    duration: Phaser.Math.Between(2000, 4000),
+                });
+
+                this.portfolioGroup.push(img);
+                currentX += img.displayWidth + 80; // Adjust spacing dynamically
+            } else {
+                console.error(`Asset "${key}" not found`);
+            }
         });
 
         this.totalDesignWidth = currentX;

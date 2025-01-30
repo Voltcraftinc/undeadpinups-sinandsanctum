@@ -9,12 +9,13 @@ export class Freelance extends Scene {
         this.load.image('background', 'assets/streetdesign.png');
         this.load.image('character', 'assets/charactersprite.png');
         this.load.image('muteButton', 'assets/mute.png');
-        this.load.image('industryWork', 'assets/industrywork.png'); // Switch button for freelance.js
-        this.load.image('backToMenu', 'assets/backToMenu.png'); // Load main menu button
-
-        // Load all freelance JPG images
-        for (let i = 1; i <= 70; i++) {
+        this.load.image('industryWork', 'assets/industrywork.png');
+        this.load.image('backToMenu', 'assets/backToMenu.png');
+    
+        // Load all freelance JPG and PNG images
+        for (let i = 1; i <= 150; i++) {
             this.load.image(`freelance${i}`, `assets/freelance(${i}).jpg`);
+            this.load.image(`freelancePNG${i}`, `assets/freelance(${i}).png`); // PNG version
         }
     }
 
@@ -108,28 +109,28 @@ export class Freelance extends Scene {
 
         // **Create and randomise the freelance assets**
         const designs = Phaser.Utils.Array.Shuffle(
-            Array.from({ length: 70 }, (_, i) => `freelance${i + 1}`)
+            Array.from({ length: 150 }, (_, i) => [`freelance${i + 1}`, `freelancePNG${i + 1}`]).flat()
         );
-
+        
         this.portfolioGroup = [];
         let currentX = 300;
-
+        
         designs.forEach((key) => {
             if (this.textures.exists(key)) {
                 const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setInteractive();
-
+        
                 // Dynamically set display size while maintaining aspect ratio
                 const maxWidth = 400;
                 const maxHeight = 400;
-
+        
                 if (img.width / img.height > 1) {
                     img.setDisplaySize(maxWidth, maxWidth / (img.width / img.height));
                 } else {
                     img.setDisplaySize(maxHeight * (img.width / img.height), maxHeight);
                 }
-
+        
                 this.addHoverZoom(img, 1.45, 200); // Add hover zoom effect
-
+        
                 // Floating animation
                 this.tweens.add({
                     targets: img,
@@ -138,7 +139,7 @@ export class Freelance extends Scene {
                     repeat: -1,
                     duration: Phaser.Math.Between(2000, 4000),
                 });
-
+        
                 this.portfolioGroup.push(img);
                 currentX += img.displayWidth + 80; // Adjust spacing dynamically
             } else {

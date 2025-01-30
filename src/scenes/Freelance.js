@@ -74,6 +74,22 @@ export class Freelance extends Scene {
         } else {
             console.error('Asset "industryWork" not found');
         }
+        
+
+// Create key indicators (on-screen UI)
+this.keyIndicators = this.add.group();
+
+// Position keys in a row
+this.leftKeyImage = this.add.image(this.scale.width / 2 - 480, this.scale.height - 150, 'leftKey').setScale(0.3);
+this.rightKeyImage = this.add.image(this.scale.width / 2 - 320, this.scale.height - 150, 'rightKey').setScale(0.3);
+this.spaceKeyImage = this.add.image(this.scale.width / 2 + -400, this.scale.height - 150, 'spaceKey').setScale(0.3);
+this.flipKeyImage = this.add.image(this.scale.width / 2 + -400, this.scale.height - 200, 'flipKey').setScale(0.3);
+
+this.keyIndicators.addMultiple([this.leftKeyImage, this.rightKeyImage, this.spaceKeyImage, this.flipKeyImage]);
+
+// Make UI elements static (not affected by camera movement)
+this.keyIndicators.children.iterate((key) => key.setScrollFactor(0));
+
 
         // **Add character with physics**
         this.character = this.physics.add.sprite(this.scale.width / 2, this.scale.height - 150, 'character');
@@ -154,6 +170,39 @@ export class Freelance extends Scene {
     }
 
     update() {
+
+        // Default reset scale for all keys
+const defaultScale = 0.3;
+const pressedScale = 0.4;
+
+// Check if LEFT or A is pressed
+if (this.cursors.left.isDown || this.cursors.A.isDown) {
+    this.leftKeyImage.setScale(pressedScale);
+} else {
+    this.leftKeyImage.setScale(defaultScale);
+}
+
+// Check if RIGHT or D is pressed
+if (this.cursors.right.isDown || this.cursors.D.isDown) {
+    this.rightKeyImage.setScale(pressedScale);
+} else {
+    this.rightKeyImage.setScale(defaultScale);
+}
+
+// Check if SPACE is pressed (Jump)
+if (this.jumpKey.isDown) {
+    this.spaceKeyImage.setScale(pressedScale);
+} else {
+    this.spaceKeyImage.setScale(defaultScale);
+}
+
+// Check if F is pressed (Flip)
+if (this.flipKey.isDown) {
+    this.flipKeyImage.setScale(pressedScale);
+} else {
+    this.flipKeyImage.setScale(defaultScale);
+}
+
         // Left & Right Movement
         if ((this.cursors.left.isDown || this.cursors.A.isDown) && this.character.x > this.scale.width / 2) {
             this.character.setVelocityX(-500);

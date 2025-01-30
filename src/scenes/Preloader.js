@@ -25,6 +25,11 @@ export class Preloader extends Scene {
         });
         this.load.audio('backgroundMusic', 'assets/starlighthollow-mellow.mp3');
         this.load.image('muteButton', 'assets/mute.png');
+        this.load.image('leftKey', 'assets/leftkey.png');
+this.load.image('rightKey', 'assets/rightkey.png');
+this.load.image('spaceKey', 'assets/spacebarkey.png');
+this.load.image('flipKey', 'assets/flipkey.png');
+
 
         // Load Freelance scene assets
         for (let i = 1; i <= 38; i++) {

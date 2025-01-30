@@ -41,14 +41,13 @@ module.exports = {
             "typeof FEATURE_SOUND": JSON.stringify(true),
         }),
         new HtmlWebpackPlugin({
-            template: "./public/index.html", // Now correctly points to the moved file
+            template: "./public/index.html",
         }),
         new CopyPlugin({
             patterns: [
-                { from: path.resolve(process.cwd(), 'public/assets'), to: 'assets' },
-                { from: path.resolve(process.cwd(), 'public/style.css'), to: 'style.css' },
-                { from: path.resolve(process.cwd(), 'public/favicon.png'), to: 'favicon.png' },
-        
+                { from: path.resolve(process.cwd(), "public/assets"), to: "assets" },
+                { from: path.resolve(process.cwd(), "public/style.css"), to: "style.css" },
+                { from: path.resolve(process.cwd(), "public/favicon.png"), to: "favicon.png" },
             ],
         }),
     ],

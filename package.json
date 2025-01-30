@@ -2,13 +2,13 @@
     "name": "template-webpack",
     "version": "3.2.1",
     "main": "src/main.js",
-"scripts": {
-    "dev": "node log.js dev & webpack-dev-server --config webpack/config.js --open",
-    "build": "node log.js build & webpack --config webpack/config.prod.js",
-    "dev-nolog": "webpack-dev-server --config webpack/config.js --open",
-    "build-nolog": "webpack --config webpack/config.prod.js",
-    "start": "webpack serve --config webpack/config.js --open"
-},
+    "scripts": {
+        "dev": "node log.js dev & webpack-dev-server --config webpack/config.js --open",
+        "build": "node log.js build & webpack --config webpack/config.prod.js",
+        "dev-nolog": "webpack-dev-server --config webpack/config.js --open",
+        "build-nolog": "webpack --config webpack/config.prod.js",
+        "start": "webpack serve --config webpack/config.js --open"
+    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/phaserjs/template-webpack.git"
@@ -21,8 +21,8 @@
     },
     "homepage": "https://github.com/phaserjs/template-webpack#readme",
     "dependencies": {
-    "phaser": "^3.87.0",
-    "ethers": "^6.13.5"
+        "ethers": "^6.13.5",
+        "phaser": "^3.87.0"
     },
     "devDependencies": {
         "@babel/core": "^7.24.5",

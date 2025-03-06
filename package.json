@@ -34,9 +34,13 @@
         "html-webpack-plugin": "^5.6.3",
         "raw-loader": "^4.0.2",
         "terser-webpack-plugin": "^5.3.10",
+        "vite": "^6.2.0",
         "webpack": "^5.97.1",
         "webpack-cli": "^5.1.4",
         "webpack-dev-server": "^5.2.0",
         "webpack-merge": "^5.10.0"
-    }
+    },
+    "description": "**Cosmic Cuddlies** is an enchanting game where you explore vibrant cosmic worlds, interact with cute creatures, and unlock magical rewards. Designed with custom assets, delightful music, and seamless gameplay, it's a journey through the cosmos like no other!",
+    "keywords": []
 }
+

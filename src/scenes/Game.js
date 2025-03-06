@@ -6,252 +6,515 @@ export class Game extends Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/streetdesign.png');
-        this.load.image('character', 'assets/charactersprite.png');
-        this.load.image('backToMenu', 'assets/backToMenu.png'); // Load main menu button
-        this.load.image('muteButton', 'assets/mute.png');
-        this.load.image('switchButton', 'assets/freelance.png'); // Switch button for freelance.js
-
-        // Load all barsandvenues JPG and PNG images
-        for (let i = 1; i <= 234; i++) {
-            this.load.image(`barsandvenues${i}`, `assets/barsandvenues(${i}).jpg`);
-            this.load.image(`barsandvenuesPNG${i}`, `assets/barsandvenues(${i}).png`); // PNG version
-        }
+        // Preloader.js handles everything, including 'goSign'
     }
 
     create() {
-        // Add a scrolling background
-        this.background = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'background')
-            .setOrigin(0)
-            .setScrollFactor(0);
+        console.log('[Game.create] START');
 
-        this.backToMenuButton = this.add.image(120, this.scale.height - 60, 'backToMenu')
-            .setInteractive()
-            .setScrollFactor(0)
-            .on('pointerdown', () => this.scene.start('MainMenu'));
+        // 1) CREATE THE GO SIGN (RIGHT-CENTRE) & HIDE IT
+        this.goSign = this.add.image(
+            this.scale.width - 100, // near right edge
+            this.scale.height / 2,  // centre vertically
+            'goSign'
+        ).setDepth(9999);
+        this.goSign.setVisible(false);
 
-        // Add mute button
-        this.muteButton = this.add.image(this.scale.width - 50, 50, 'muteButton')
-            .setScale(0.2)
-            .setInteractive()
-            .setScrollFactor(0);
-        this.muteButton.on('pointerdown', () => {
-            const music = this.sound.get('backgroundMusic');
-            if (music) {
-                music.isPlaying ? music.pause() : music.resume();
-            }
+        // (FLASH) CREATE A TWEEN THAT PULSES ALPHA, BUT PAUSED INITIALLY
+        this.goSignTween = this.tweens.add({
+            targets: this.goSign,
+            alpha: 0.2,       // fade down to alpha=0.2
+            duration: 500,
+            ease: 'Linear',
+            yoyo: true,       // go back to alpha=1
+            repeat: -1,       // loop forever
+            paused: true      // don’t start until we say so
         });
 
-        // Add switch button
-        this.switchButton = this.add.image(this.scale.width - 100, this.scale.height - 80, 'switchButton')
-            .setScale(0.2)
-            .setInteractive()
-            .setScrollFactor(0);
-        this.switchButton.on('pointerdown', () => {
-            this.scene.start('Freelance');
-        });
+        // The background is 7392 wide
+        this.gameWidth = 7392;
+        this.totalSections = 5;
+        this.sectionWidth = 1024;
+        this.currentSection = 0;
 
-// Create key indicators (on-screen UI)
-this.keyIndicators = this.add.group();
+        // Add background
+        this.background = this.add.image(0, 0, 'background').setOrigin(0, 0);
+        this.background.setDepth(-9999);
 
-// Position keys in a row
-this.leftKeyImage = this.add.image(this.scale.width / 2 - 480, this.scale.height - 150, 'leftKey').setScale(0.3);
-this.rightKeyImage = this.add.image(this.scale.width / 2 - 320, this.scale.height - 150, 'rightKey').setScale(0.3);
-this.spaceKeyImage = this.add.image(this.scale.width / 2 + -400, this.scale.height - 150, 'spaceKey').setScale(0.3);
-this.flipKeyImage = this.add.image(this.scale.width / 2 + -400, this.scale.height - 200, 'flipKey').setScale(0.3);
+        // Road area => clamp Y
+        this.roadTop = this.scale.height - 275;
+        this.roadBottom = this.scale.height - 100;
 
-this.keyIndicators.addMultiple([this.leftKeyImage, this.rightKeyImage, this.spaceKeyImage, this.flipKeyImage]);
+        // Player
+        this.player = this.add.sprite(50, this.roadBottom, 'Idle').setScale(1.5);
+        this.player.setDepth(9999);
 
-// Make UI elements static (not affected by camera movement)
-this.keyIndicators.children.iterate((key) => key.setScrollFactor(0));
+        this.isJumping = false;
+        this.isAttacking = false;
 
-
-
-        // **Add character with physics**
-        this.character = this.physics.add.sprite(this.scale.width / 2, this.scale.height - 150, 'character');
-        this.character.setScale(0.5).setCollideWorldBounds(true);
-        this.character.setGravityY(300); // Gravity for smooth hover effect
-        this.character.setBounce(0.2); // Slight bounce for realism
-
-        // **Set custom landing position**
-        this.landingY = this.scale.height - 150; // Defines where the character lands
-
-        // Floating hover animation
-        this.tweens.add({
-            targets: this.character,
-            y: this.character.y - 10,
-            yoyo: true,
-            repeat: -1,
-            duration: 800,
-        });
-
-        // **Enable movement controls**
+        // Keyboard
         this.cursors = this.input.keyboard.addKeys({
             left: Phaser.Input.Keyboard.KeyCodes.LEFT,
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+            up: Phaser.Input.Keyboard.KeyCodes.UP,
+            down: Phaser.Input.Keyboard.KeyCodes.DOWN,
+            W: Phaser.Input.Keyboard.KeyCodes.W,
+            S: Phaser.Input.Keyboard.KeyCodes.S,
             A: Phaser.Input.Keyboard.KeyCodes.A,
             D: Phaser.Input.Keyboard.KeyCodes.D,
+            shift: Phaser.Input.Keyboard.KeyCodes.SHIFT,
+            space: Phaser.Input.Keyboard.KeyCodes.SPACE,
+            attack: Phaser.Input.Keyboard.KeyCodes.PERIOD
         });
 
-        // **Jump and Flip Controls**
-        this.jumpKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        this.flipKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.F);
-        this.hasFlipped = false;
-        this.isJumping = false;
+        // Projectiles array
+        this.bloodProjectiles = [];
 
-        // **Load and randomise the barsandvenues assets**
-        const designs = Phaser.Utils.Array.Shuffle(
-            Array.from({ length: 234 }, (_, i) => [`barsandvenues${i + 1}`, `barsandvenuesPNG${i + 1}`]).flat()
-        );
+        // Create animations
+        this.createAnimations();
+        this.player.play('Idle');
 
-        this.portfolioGroup = [];
-        let currentX = 300;
+        // Attack => spawn projectile after Attack_1
+        this.player.on('animationcomplete-Attack_1', () => {
+            if (this.isAttacking) {
+                console.log('[Attack_1 complete] => spawn projectile');
+                const offsetX = this.player.flipX ? -30 : 30;
+                const offsetY = -30;
+                const proj = this.add.sprite(this.player.x + offsetX, this.player.y + offsetY, 'Blood_Charge');
+                proj.flipX = this.player.flipX;
+                proj.speed = this.player.flipX ? -300 : 300;
+                proj.setDepth(9999);
 
-        designs.forEach((key) => {
-            if (this.textures.exists(key)) {
-                const img = this.add.image(currentX, this.scale.height / 2 - 150, key).setInteractive();
+                proj.play('Blood_Charge_Anim');
 
-                // Dynamically set display size while maintaining aspect ratio
-                const maxWidth = 400;
-                const maxHeight = 400;
-
-                if (img.width / img.height > 1) {
-                    img.setDisplaySize(maxWidth, maxWidth / (img.width / img.height));
-                } else {
-                    img.setDisplaySize(maxHeight * (img.width / img.height), maxHeight);
-                }
-
-                this.addHoverZoom(img, 1.2, 200);
-
-                // Floating animation
-                this.tweens.add({
-                    targets: img,
-                    y: img.y + 15,
-                    yoyo: true,
-                    repeat: -1,
-                    duration: Phaser.Math.Between(2000, 4000),
-                });
-
-                this.portfolioGroup.push(img);
-                currentX += img.displayWidth + 80; // Adjust spacing dynamically
-            } else {
-                console.error(`Asset "${key}" not found`);
+                this.bloodProjectiles.push(proj);
             }
         });
 
-        this.totalDesignWidth = currentX;
-        this.physics.world.setBounds(0, 0, this.totalDesignWidth, this.scale.height);
-        this.cameras.main.setBounds(0, 0, this.totalDesignWidth, this.scale.height);
-        this.cameras.main.startFollow(this.character);
+        // Crisp
+        this.cameras.main.roundPixels = true;
+
+        // Wave system & UI
+        this.createPlayerSoulUI();
+        this.createKillsUI();
+        this.initWaveSystem();
     }
 
-    update() {
+    update(time, delta) {
+        const dt = delta / 1000;
+        const speed = this.cursors.shift.isDown ? 200 : 120;
 
-                // Default reset scale for all keys
-const defaultScale = 0.3;
-const pressedScale = 0.4;
+        const sectionStart = this.currentSection * this.sectionWidth;
+        const sectionEnd = sectionStart + this.sectionWidth;
 
-// Check if LEFT or A is pressed
-if (this.cursors.left.isDown || this.cursors.A.isDown) {
-    this.leftKeyImage.setScale(pressedScale);
-} else {
-    this.leftKeyImage.setScale(defaultScale);
-}
-
-// Check if RIGHT or D is pressed
-if (this.cursors.right.isDown || this.cursors.D.isDown) {
-    this.rightKeyImage.setScale(pressedScale);
-} else {
-    this.rightKeyImage.setScale(defaultScale);
-}
-
-// Check if SPACE is pressed (Jump)
-if (this.jumpKey.isDown) {
-    this.spaceKeyImage.setScale(pressedScale);
-} else {
-    this.spaceKeyImage.setScale(defaultScale);
-}
-
-// Check if F is pressed (Flip)
-if (this.flipKey.isDown) {
-    this.flipKeyImage.setScale(pressedScale);
-} else {
-    this.flipKeyImage.setScale(defaultScale);
-}
-
-        // **Left & Right Movement**
-        if ((this.cursors.left.isDown || this.cursors.A.isDown) && this.character.x > this.scale.width / 2) {
-            this.character.setVelocityX(-500);
-            this.character.flipX = true;
-            this.background.tilePositionX -= 2;
-        } else if (this.cursors.right.isDown || this.cursors.D.isDown) {
-            this.character.setVelocityX(500);
-            this.character.flipX = false;
-            this.background.tilePositionX += 2;
-        } else {
-            this.character.setVelocityX(0);
+        // Horizontal movement
+        let movingHoriz = false;
+        if ((this.cursors.left.isDown || this.cursors.A.isDown) && !this.isAttacking) {
+            movingHoriz = true;
+            this.player.x -= speed * dt;
+            this.player.flipX = true;
+        }
+        else if ((this.cursors.right.isDown || this.cursors.D.isDown) && !this.isAttacking) {
+            movingHoriz = true;
+            this.player.x += speed * dt;
+            this.player.flipX = false;
         }
 
-        // **Jumping with Spacebar (Smooth Hoverboard Motion)**
-        if (Phaser.Input.Keyboard.JustDown(this.jumpKey) && !this.isJumping) {
-            this.isJumping = true;
-            this.hasFlipped = false;
+        // Vertical
+        let movingVert = false;
+        if ((this.cursors.up.isDown || this.cursors.W.isDown) && !this.isAttacking) {
+            movingVert = true;
+            this.player.y -= speed * dt;
+        }
+        else if ((this.cursors.down.isDown || this.cursors.S.isDown) && !this.isAttacking) {
+            movingVert = true;
+            this.player.y += speed * dt;
+        }
 
-            // Apply smooth jump motion (tween up, then down)
+        // Clamp Y if not jumping
+        if (!this.isJumping) {
+            if (this.player.y < this.roadTop) {
+                this.player.y = this.roadTop;
+            }
+            if (this.player.y > this.roadBottom) {
+                this.player.y = this.roadBottom;
+            }
+        }
+
+        // Movement anim
+        if (!this.isAttacking && !this.isJumping) {
+            if (movingHoriz || movingVert) {
+                this.player.play(this.cursors.shift.isDown ? 'Run' : 'Walk', true);
+            } else {
+                this.player.play('Idle', true);
+            }
+        }
+
+        // Jump
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.space) && !this.isJumping && !this.isAttacking) {
+            this.isJumping = true;
+            this.player.play('Jump', true);
             this.tweens.add({
-                targets: this.character,
-                y: this.character.y - 150,
-                duration: 600,
-                ease: 'Quad.easeOut',
+                targets: this.player,
+                y: this.player.y - 80,
+                duration: 300,
+                ease: 'Sine.easeOut',
                 onComplete: () => {
                     this.tweens.add({
-                        targets: this.character,
-                        y: this.landingY,
-                        duration: 800,
-                        ease: 'Quad.easeIn',
+                        targets: this.player,
+                        y: this.player.y + 80,
+                        duration: 300,
+                        ease: 'Sine.easeIn',
                         onComplete: () => {
                             this.isJumping = false;
+                            if (!this.isAttacking) {
+                                if (movingHoriz || movingVert) {
+                                    this.player.play(this.cursors.shift.isDown ? 'Run' : 'Walk', true);
+                                } else {
+                                    this.player.play('Idle', true);
+                                }
+                            }
                         }
                     });
                 }
             });
         }
 
-        // **Backflip with F Key (only in the air & only once per jump)**
-        if (Phaser.Input.Keyboard.JustDown(this.flipKey) && this.isJumping && !this.hasFlipped) {
-            this.hasFlipped = true;
-            this.tweens.add({
-                targets: this.character,
-                angle: this.character.angle + 360,
-                duration: 600,
-                ease: 'Cubic.easeOut'
+        // Attack => single image projectile
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.attack) && !this.isAttacking && !this.isJumping) {
+            this.isAttacking = true;
+            this.player.play('Attack_1', true);
+
+            // revert after 500ms
+            this.time.delayedCall(500, () => {
+                if (this.isAttacking) {
+                    this.isAttacking = false;
+                    if (movingHoriz || movingVert) {
+                        this.player.play(this.cursors.shift.isDown ? 'Run' : 'Walk', true);
+                    } else {
+                        this.player.play('Idle', true);
+                    }
+                }
             });
         }
 
-        // **Ensure images remain visible**
-        this.portfolioGroup.forEach((design) => {
-            if (design.x < this.character.x - this.scale.width) {
-                design.x += this.totalDesignWidth;
-            } else if (design.x > this.character.x + this.scale.width) {
-                design.x -= this.totalDesignWidth;
+        // Move projectiles
+        const totalWidth = this.totalSections * this.sectionWidth; // 5120
+        for (let i = this.bloodProjectiles.length - 1; i >= 0; i--) {
+            const p = this.bloodProjectiles[i];
+            p.x += p.speed * dt;
+            if (p.x < 0 || p.x > totalWidth) {
+                p.destroy();
+                this.bloodProjectiles.splice(i, 1);
             }
+        }
+
+        // Waves & zombies
+        this.updateZombies(dt);
+        this.checkProjectileHits();
+        this.handleSectionTransition();
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // ANIMATIONS
+    ///////////////////////////////////////////////////////////////////////////
+    createAnimations() {
+        // Player
+        this.anims.create({ key: 'Idle',     frames: this.anims.generateFrameNumbers('Idle'),     frameRate: 6,  repeat: -1 });
+        this.anims.create({ key: 'Walk',     frames: this.anims.generateFrameNumbers('Walk'),     frameRate: 10, repeat: -1 });
+        this.anims.create({ key: 'Run',      frames: this.anims.generateFrameNumbers('Run'),      frameRate: 14, repeat: -1 });
+        this.anims.create({ key: 'Jump',     frames: this.anims.generateFrameNumbers('Jump'),     frameRate: 10, repeat: 0  });
+        this.anims.create({ key: 'Attack_1', frames: this.anims.generateFrameNumbers('Attack_1'), frameRate: 12, repeat: 0  });
+
+        // Zombie1
+        this.anims.create({ key: "Zombie1_Idle",   frames: this.anims.generateFrameNumbers("Zombie1_Idle"),   frameRate:6, repeat:-1 });
+        this.anims.create({ key: "Zombie1_Walk",   frames: this.anims.generateFrameNumbers("Zombie1_Walk"),   frameRate:8, repeat:-1 });
+        this.anims.create({ key: "Zombie1_Attack", frames: this.anims.generateFrameNumbers("Zombie1_Attack"), frameRate:8, repeat:0 });
+        this.anims.create({ key: "Zombie1_Hurt",   frames: this.anims.generateFrameNumbers("Zombie1_Hurt"),   frameRate:8, repeat:0 });
+        this.anims.create({ key: "Zombie1_Dead",   frames: this.anims.generateFrameNumbers("Zombie1_Dead"),   frameRate:6, repeat:0 });
+
+        // Zombie2
+        this.anims.create({ key: "Zombie2_Idle",   frames: this.anims.generateFrameNumbers("Zombie2_Idle"),   frameRate:6, repeat:-1 });
+        this.anims.create({ key: "Zombie2_Walk",   frames: this.anims.generateFrameNumbers("Zombie2_Walk"),   frameRate:8, repeat:-1 });
+        this.anims.create({ key: "Zombie2_Attack", frames: this.anims.generateFrameNumbers("Zombie2_Attack"), frameRate:8, repeat:0 });
+        this.anims.create({ key: "Zombie2_Hurt",   frames: this.anims.generateFrameNumbers("Zombie2_Hurt"),   frameRate:8, repeat:0 });
+        this.anims.create({ key: "Zombie2_Dead",   frames: this.anims.generateFrameNumbers("Zombie2_Dead"),   frameRate:6, repeat:0 });
+
+        // Zombie3
+        this.anims.create({ key: "Zombie3_Idle",   frames: this.anims.generateFrameNumbers("Zombie3_Idle"),   frameRate:6, repeat:-1 });
+        this.anims.create({ key: "Zombie3_Walk",   frames: this.anims.generateFrameNumbers("Zombie3_Walk"),   frameRate:8, repeat:-1 });
+        this.anims.create({ key: "Zombie3_Attack", frames: this.anims.generateFrameNumbers("Zombie3_Attack"), frameRate:8, repeat:0 });
+        this.anims.create({ key: "Zombie3_Hurt",   frames: this.anims.generateFrameNumbers("Zombie3_Hurt"),   frameRate:8, repeat:0 });
+        this.anims.create({ key: "Zombie3_Dead",   frames: this.anims.generateFrameNumbers("Zombie3_Dead"),   frameRate:6, repeat:0 });
+
+        // Zombie4
+        this.anims.create({ key: "Zombie4_Idle",   frames: this.anims.generateFrameNumbers("Zombie4_Idle"),   frameRate:6, repeat:-1 });
+        this.anims.create({ key: "Zombie4_Walk",   frames: this.anims.generateFrameNumbers("Zombie4_Walk"),   frameRate:8, repeat:-1 });
+        this.anims.create({ key: "Zombie4_Attack", frames: this.anims.generateFrameNumbers("Zombie4_Attack"), frameRate:8, repeat:0 });
+        this.anims.create({ key: "Zombie4_Hurt",   frames: this.anims.generateFrameNumbers("Zombie4_Hurt"),   frameRate:8, repeat:0 });
+        this.anims.create({ key: "Zombie4_Dead",   frames: this.anims.generateFrameNumbers("Zombie4_Dead"),   frameRate:6, repeat:0 });
+
+        // Projectile animation
+        this.anims.create({
+            key: 'Blood_Charge_Anim',
+            frames: this.anims.generateFrameNumbers('Blood_Charge', { start: 0, end: 2 }),
+            frameRate: 10,
+            repeat: -1
         });
     }
 
-    addHoverZoom(target, scaleFactor, duration) {
-        target.on('pointerover', () => {
-            this.tweens.add({
-                targets: target,
-                scale: target.scale * scaleFactor,
-                duration: duration,
+    ///////////////////////////////////////////////////////////////////////////
+    // UI
+    ///////////////////////////////////////////////////////////////////////////
+    playerSoul= 100;
+    kills= 0;
+
+    createPlayerSoulUI() {
+        this.soulBg = this.add.rectangle(10, 10, 200, 20, 0x000000).setOrigin(0).setDepth(9999);
+        this.soulFill = this.add.rectangle(10, 10, 200, 20, 0xff0000).setOrigin(0).setDepth(9999);
+        this.soulText = this.add.text(12, 12, "Soul: 100%", { fontSize:"14px", color:"#ffffff" }).setDepth(9999);
+    }
+    updatePlayerSoulUI() {
+        if (this.playerSoul < 0) this.playerSoul = 0;
+        if (this.playerSoul > 100) this.playerSoul = 100;
+        const ratio = this.playerSoul / 100;
+        this.soulFill.width = 200 * ratio;
+        this.soulText.setText(`Soul: ${this.playerSoul}%`);
+    }
+
+    createKillsUI() {
+        this.killsText = this.add.text(12, 34, "Kills: 0", { fontSize:"14px", color:"#00ff00" }).setDepth(9999);
+    }
+    updateKillsUI() {
+        this.killsText.setText(`Kills: ${this.kills}`);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // WAVE SYSTEM
+    ///////////////////////////////////////////////////////////////////////////
+    waveNumber=1;
+    waveZombiesLeft=0;
+    waveDone= false;
+    stageTransitioning= false;
+
+    zombies= [];
+
+    initWaveSystem() {
+        console.log('[initWaveSystem] called ONCE');
+        this.playerSoul= 100;
+        this.updatePlayerSoulUI();
+        this.kills= 0;
+        this.updateKillsUI();
+        this.waveNumber=1;
+        this.startWave();
+    }
+
+    startWave() {
+        const waveIndex = ((this.waveNumber -1) % 10)+1; // 1..10
+        const waveCycle = Math.floor((this.waveNumber -1)/10);
+
+        const baseBars=2, baseSpeed=40, baseDamage=10;
+        const healthMult= 2** waveCycle;    
+        const speedMult= 1 + 0.25* waveCycle; 
+        const damageMult= 2** waveCycle;     
+
+        const waveBars= baseBars* healthMult;
+        const waveSpeed= baseSpeed* speedMult;
+        const waveDamage= baseDamage* damageMult;
+
+        this.waveZombiesLeft= waveIndex;
+        this.waveDone= false;
+
+        console.log(`Spawning wave #${this.waveNumber} => waveIndex=${waveIndex}, waveCycle=${waveCycle}, bars=${waveBars}, speed=${waveSpeed}`);
+
+        for(let i=0; i< waveIndex; i++){
+            this.time.delayedCall(2000*i, ()=>{
+                this.spawnOneZombie(waveBars, waveSpeed, waveDamage);
             });
+        }
+    }
+
+    spawnOneZombie(bars, speed, damage) {
+        const type= Phaser.Math.Between(1,4);
+
+        const spawnX = this.sectionWidth - 50;
+        const spawnY= Phaser.Math.Between(this.roadTop, this.roadBottom);
+
+        const z= this.add.sprite(spawnX, spawnY, `Zombie${type}_Idle`).setDepth(9999);
+        z.play(`Zombie${type}_Idle`);
+
+        z.type= type;
+        z.bars= bars;
+        z.damage= damage;
+        z.speed= speed;
+        z.isDead= false;
+        z.isAttacking= false;
+
+        // small HP bar
+        z.healthBg= this.add.rectangle(z.x-20,z.y-40,40,5,0x000000).setDepth(9999);
+        z.healthFill= this.add.rectangle(z.x-20,z.y-40,40,5,0xff0000).setDepth(9999);
+
+        // after 1s => walk
+        this.time.delayedCall(1000, ()=> {
+            if(!z.isDead){
+                z.play(`Zombie${z.type}_Walk`);
+            }
         });
-        target.on('pointerout', () => {
+
+        this.zombies.push(z);
+    }
+
+    updateZombies(dt) {
+        for(let i=this.zombies.length-1; i>=0; i--){
+            const z= this.zombies[i];
+            if(z.isDead){
+                // remove if dead anim done
+                if(z.anims.currentAnim && z.anims.currentAnim.key.includes("Dead") && !z.anims.isPlaying){
+                    z.healthBg.destroy();
+                    z.healthFill.destroy();
+                    z.destroy();
+                    this.zombies.splice(i,1);
+
+                    this.waveZombiesLeft--;
+                    this.kills++;
+                    this.updateKillsUI();
+
+                    if(this.waveZombiesLeft<=0){
+                        this.waveDone= true;
+                        console.log('[updateZombies] wave done => waveZombiesLeft=0 => waveDone=true');
+
+                        // SHOW THE SIGN & START FLASHING
+                        this.goSign.setVisible(true);
+                        this.goSignTween.play();  // (FLASH) PLAY THE TWEEN
+                    }
+                }
+                continue;
+            }
+
+            // update HP bar
+            z.healthBg.x= z.x-20; 
+            z.healthBg.y= z.y-40;
+            z.healthFill.x= z.x-20; 
+            z.healthFill.y= z.y-40;
+            const maxBars= 8;
+            const ratio= z.bars/ maxBars;
+            z.healthFill.width= 40* ratio;
+
+            // chase player if not attacking
+            if(!z.isAttacking){
+                const angle= Math.atan2(this.player.y- z.y, this.player.x- z.x);
+                const vx= Math.cos(angle)* z.speed* dt;
+                const vy= Math.sin(angle)* z.speed* dt;
+                z.x += vx;
+                z.y += vy;
+
+                // face the player
+                z.flipX= (z.x> this.player.x);
+            }
+
+            // if close => attack
+            const dist= Phaser.Math.Distance.Between(z.x,z.y, this.player.x,this.player.y);
+            if(dist<40 && !z.isAttacking){
+                z.isAttacking= true;
+                z.play(`Zombie${z.type}_Attack`);
+                z.once('animationcomplete', ()=> {
+                    if(!z.isDead){
+                        this.playerSoul-= z.damage;
+                        if(this.playerSoul<0) this.playerSoul=0;
+                        this.updatePlayerSoulUI();
+
+                        z.isAttacking= false;
+                        if(!z.isDead){
+                            z.play(`Zombie${z.type}_Walk`);
+                        }
+
+                        // if soul=0 => game over
+                        if(this.playerSoul<=0){
+                            console.log('Game Over => fade => scene start');
+                            this.cameras.main.fadeOut(1000,0,0,0);
+                            this.cameras.main.once('camerafadeoutcomplete', ()=>{
+                                this.scene.start('GameOver');
+                            });
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    checkProjectileHits() {
+        for(let i=this.bloodProjectiles.length-1; i>=0; i--){
+            const p= this.bloodProjectiles[i];
+            for(let z of this.zombies){
+                if(z.isDead) continue;
+                const dist= Phaser.Math.Distance.Between(p.x,p.y, z.x,z.y);
+                if(dist<30){
+                    // hit
+                    p.destroy();
+                    this.bloodProjectiles.splice(i,1);
+
+                    z.bars--;
+                    z.play(`Zombie${z.type}_Hurt`);
+                    if(z.bars<=0){
+                        z.isDead= true;
+                        z.play(`Zombie${z.type}_Dead`);
+                    } else {
+                        // after short delay => walk
+                        this.time.delayedCall(300, ()=>{
+                            if(!z.isDead && !z.isAttacking){
+                                z.play(`Zombie${z.type}_Walk`);
+                            }
+                        });
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    stageTransitioning= false;
+
+    handleSectionTransition() {
+        // If wave not done => clamp x=1000
+        if(!this.waveDone){
+            if(this.player.x>=1000){
+                this.player.x=1000;
+            }
+            return;
+        }
+
+        // wave done => if x≥1000 => shift once
+        if(this.player.x>=1000 && !this.stageTransitioning){
+            // HIDE THE SIGN & STOP FLASHING
+            this.goSign.setVisible(false);
+            this.goSignTween.pause(); // (FLASH) STOP THE TWEEN
+            this.goSign.setAlpha(1);  // optional: reset alpha to 1
+
+            this.stageTransitioning= true;
+            console.log(`[handleSectionTransition] wave #${this.waveNumber} done => shifting left => waveNumber++ => ${this.waveNumber+1}`);
+            this.player.x=1000;
+
+            const shift= this.sectionWidth;
+            this.currentSection= (this.currentSection+1)% this.totalSections;
+
+            // keep them on top
+            this.background.setDepth(-9999);
+            this.player.setDepth(9999);
+            this.bloodProjectiles.forEach(b=> b.setDepth(9999));
+            this.zombies.forEach(z=> z.setDepth(9999));
+
             this.tweens.add({
-                targets: target,
-                scale: target.scale / scaleFactor,
-                duration: duration,
+                targets:[this.background, this.player, ...this.bloodProjectiles, ...this.zombies],
+                x:(target)=> target.x- shift,
+                duration:1000,
+                ease:'Sine.easeInOut',
+                onComplete:()=>{
+                    this.waveNumber++;
+                    this.waveDone= false;
+                    this.startWave();
+                    this.stageTransitioning= false;
+                }
             });
-        });
+        }
     }
 }

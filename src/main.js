@@ -3,7 +3,7 @@ import { Boot } from "./scenes/Boot";
 import { Preloader } from "./scenes/Preloader";
 import { MainMenu } from "./scenes/MainMenu";
 import { Game } from "./scenes/Game";
-import { Freelance } from "./scenes/Freelance";
+import { GameOver } from './scenes/GameOver';
 
 const config = {
     type: Phaser.AUTO,
@@ -16,7 +16,7 @@ const config = {
             debug: false,
         },
     },
-    scene: [Boot, Preloader, MainMenu, Game, Freelance],
+    scene: [Boot, Preloader, MainMenu, Game, GameOver],
 };
 
 if (!window.game) {

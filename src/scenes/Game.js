@@ -6,29 +6,40 @@ export class Game extends Scene {
     }
 
     preload() {
-        // Preloader.js handles everything, including 'goSign'
+        // Preloader.js handles everything (including 'goSign' and audio).
     }
 
     create() {
         console.log('[Game.create] START');
 
-        // 1) CREATE THE GO SIGN (RIGHT-CENTRE) & HIDE IT
+        // 1) AUDIO REFERENCES
+        // Arrays of hurt sounds for random playback:
+        this.zombieHurtSounds = [
+            this.sound.add("zombiehurt1"),
+            this.sound.add("zombiehurt2"),
+            this.sound.add("zombiehurt3")
+        ];
+
+        // Single sound for blood-charge fire:
+        this.bloodChargeSound = this.sound.add("bloodchargefire");
+
+        // 2) CREATE THE GO SIGN
         this.goSign = this.add.image(
-            this.scale.width - 100, // near right edge
-            this.scale.height / 2,  // centre vertically
+            this.scale.width - 100,
+            this.scale.height / 2,
             'goSign'
         ).setDepth(9999);
         this.goSign.setVisible(false);
 
-        // (FLASH) CREATE A TWEEN THAT PULSES ALPHA, BUT PAUSED INITIALLY
+        // Flash tween for GO sign
         this.goSignTween = this.tweens.add({
             targets: this.goSign,
-            alpha: 0.2,       // fade down to alpha=0.2
+            alpha: 0.2,
             duration: 500,
             ease: 'Linear',
-            yoyo: true,       // go back to alpha=1
-            repeat: -1,       // loop forever
-            paused: true      // don’t start until we say so
+            yoyo: true,
+            repeat: -1,
+            paused: true
         });
 
         // The background is 7392 wide
@@ -37,7 +48,7 @@ export class Game extends Scene {
         this.sectionWidth = 1024;
         this.currentSection = 0;
 
-        // Add background
+        // Add your 7392×766 background at (0,0)
         this.background = this.add.image(0, 0, 'background').setOrigin(0, 0);
         this.background.setDepth(-9999);
 
@@ -78,6 +89,10 @@ export class Game extends Scene {
         this.player.on('animationcomplete-Attack_1', () => {
             if (this.isAttacking) {
                 console.log('[Attack_1 complete] => spawn projectile');
+
+                // Play blood-charge-fire sound:
+                this.bloodChargeSound.play();
+
                 const offsetX = this.player.flipX ? -30 : 30;
                 const offsetY = -30;
                 const proj = this.add.sprite(this.player.x + offsetX, this.player.y + offsetY, 'Blood_Charge');
@@ -86,7 +101,6 @@ export class Game extends Scene {
                 proj.setDepth(9999);
 
                 proj.play('Blood_Charge_Anim');
-
                 this.bloodProjectiles.push(proj);
             }
         });
@@ -104,9 +118,6 @@ export class Game extends Scene {
         const dt = delta / 1000;
         const speed = this.cursors.shift.isDown ? 200 : 120;
 
-        const sectionStart = this.currentSection * this.sectionWidth;
-        const sectionEnd = sectionStart + this.sectionWidth;
-
         // Horizontal movement
         let movingHoriz = false;
         if ((this.cursors.left.isDown || this.cursors.A.isDown) && !this.isAttacking) {
@@ -118,6 +129,11 @@ export class Game extends Scene {
             movingHoriz = true;
             this.player.x += speed * dt;
             this.player.flipX = false;
+        }
+
+        // (A) Prevent walking off the left edge:
+        if (this.player.x < 0) {
+            this.player.x = 0;
         }
 
         // Vertical
@@ -314,9 +330,9 @@ export class Game extends Scene {
         const waveCycle = Math.floor((this.waveNumber -1)/10);
 
         const baseBars=2, baseSpeed=40, baseDamage=10;
-        const healthMult= 2** waveCycle;    
-        const speedMult= 1 + 0.25* waveCycle; 
-        const damageMult= 2** waveCycle;     
+        const healthMult= 2** waveCycle;    // 1,2,4,...
+        const speedMult= 1 + 0.25* waveCycle; // waveCycle=1 => 1.25
+        const damageMult= 2** waveCycle;    // 1,2,4,...
 
         const waveBars= baseBars* healthMult;
         const waveSpeed= baseSpeed* speedMult;
@@ -337,11 +353,20 @@ export class Game extends Scene {
     spawnOneZombie(bars, speed, damage) {
         const type= Phaser.Math.Between(1,4);
 
+        // spawn at right edge of the *current* stage
         const spawnX = this.sectionWidth - 50;
+
         const spawnY= Phaser.Math.Between(this.roadTop, this.roadBottom);
 
         const z= this.add.sprite(spawnX, spawnY, `Zombie${type}_Idle`).setDepth(9999);
         z.play(`Zombie${type}_Idle`);
+
+        // Movement sound => loop
+        z.movementSound = this.sound.add("zombiemovementsound", {
+            loop: true,
+            volume: 0.7
+        });
+        z.movementSound.play();
 
         z.type= type;
         z.bars= bars;
@@ -370,6 +395,12 @@ export class Game extends Scene {
             if(z.isDead){
                 // remove if dead anim done
                 if(z.anims.currentAnim && z.anims.currentAnim.key.includes("Dead") && !z.anims.isPlaying){
+                    // Stop & destroy movement sound
+                    if (z.movementSound) {
+                        z.movementSound.stop();
+                        z.movementSound.destroy();
+                    }
+
                     z.healthBg.destroy();
                     z.healthFill.destroy();
                     z.destroy();
@@ -378,14 +409,13 @@ export class Game extends Scene {
                     this.waveZombiesLeft--;
                     this.kills++;
                     this.updateKillsUI();
-
                     if(this.waveZombiesLeft<=0){
                         this.waveDone= true;
                         console.log('[updateZombies] wave done => waveZombiesLeft=0 => waveDone=true');
 
-                        // SHOW THE SIGN & START FLASHING
+                        // Show the GO! sign & flash
                         this.goSign.setVisible(true);
-                        this.goSignTween.play();  // (FLASH) PLAY THE TWEEN
+                        this.goSignTween.play();
                     }
                 }
                 continue;
@@ -442,7 +472,11 @@ export class Game extends Scene {
         }
     }
 
+    // <------------------ MAKE SURE THIS FUNCTION EXISTS ------------------>
     checkProjectileHits() {
+        // If the scene is no longer active (e.g. game over), skip
+        if(!this.scene.isActive()) return;
+
         for(let i=this.bloodProjectiles.length-1; i>=0; i--){
             const p= this.bloodProjectiles[i];
             for(let z of this.zombies){
@@ -455,6 +489,10 @@ export class Game extends Scene {
 
                     z.bars--;
                     z.play(`Zombie${z.type}_Hurt`);
+
+                    // PLAY RANDOM HURT SOUND
+                    Phaser.Utils.Array.GetRandom(this.zombieHurtSounds).play();
+
                     if(z.bars<=0){
                         z.isDead= true;
                         z.play(`Zombie${z.type}_Dead`);
@@ -485,10 +523,10 @@ export class Game extends Scene {
 
         // wave done => if x≥1000 => shift once
         if(this.player.x>=1000 && !this.stageTransitioning){
-            // HIDE THE SIGN & STOP FLASHING
+            // Hide the GO! sign & stop flashing
             this.goSign.setVisible(false);
-            this.goSignTween.pause(); // (FLASH) STOP THE TWEEN
-            this.goSign.setAlpha(1);  // optional: reset alpha to 1
+            this.goSignTween.pause();
+            this.goSign.setAlpha(1);
 
             this.stageTransitioning= true;
             console.log(`[handleSectionTransition] wave #${this.waveNumber} done => shifting left => waveNumber++ => ${this.waveNumber+1}`);

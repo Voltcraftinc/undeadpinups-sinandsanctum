@@ -19,6 +19,13 @@ export class Preloader extends Scene {
         this.load.image("muteButton", "assets/mute.png");
         this.load.image("goSign", "assets/go-icon.png");
 
+        this.load.audio("zombiehurt1", "assets/zombiehurt1.mp3");
+this.load.audio("zombiehurt2", "assets/zombiehurt2.mp3");
+this.load.audio("zombiehurt3", "assets/zombiehurt3.mp3");
+this.load.audio("bloodchargefire", "assets/bloodchargefire.mp3");
+this.load.audio("zombiemovementsound", "assets/zombiemovementsound.mp3");
+
+
 
         // **Load Character Spritesheets** (Countess)
         this.load.spritesheet("Idle", "assets/sprites/Countess_Vampire/Idle.png", {

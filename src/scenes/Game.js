@@ -6,32 +6,37 @@ export class Game extends Scene {
     }
 
     preload() {
-        // Preloader.js handles everything (including 'goSign' and audio).
+        // Preloader.js should handle everything (including 'goSign', audio, new images).
+        // Make sure you load:
+        // this.load.spritesheet("Dead", "assets/sprites/Countess_Vampire/Dead.png", { frameWidth: 128, frameHeight: 128 });
     }
 
     create() {
         console.log('[Game.create] START');
 
-        // 1) AUDIO REFERENCES
-        // Arrays of hurt sounds for random playback:
+        ///////////////////////////////////////////////////////////////////////////
+        // FLAGS & ARRAYS
+        ///////////////////////////////////////////////////////////////////////////
+        this.playerDead = false;  // so we skip further hits after 0% soul
+        this.drops = [];          // array for soul/wynx drops
+
+        ///////////////////////////////////////////////////////////////////////////
+        // AUDIO
+        ///////////////////////////////////////////////////////////////////////////
         this.zombieHurtSounds = [
             this.sound.add("zombiehurt1"),
             this.sound.add("zombiehurt2"),
             this.sound.add("zombiehurt3")
         ];
-
-        // Single sound for blood-charge fire:
         this.bloodChargeSound = this.sound.add("bloodchargefire");
 
-        // 2) CREATE THE GO SIGN
-        this.goSign = this.add.image(
-            this.scale.width - 100,
-            this.scale.height / 2,
-            'goSign'
-        ).setDepth(9999);
-        this.goSign.setVisible(false);
+        ///////////////////////////////////////////////////////////////////////////
+        // GO SIGN
+        ///////////////////////////////////////////////////////////////////////////
+        this.goSign = this.add.image(this.scale.width - 100, this.scale.height / 2, 'goSign')
+            .setDepth(9999)
+            .setVisible(false);
 
-        // Flash tween for GO sign
         this.goSignTween = this.tweens.add({
             targets: this.goSign,
             alpha: 0.2,
@@ -42,28 +47,32 @@ export class Game extends Scene {
             paused: true
         });
 
-        // The background is 7392 wide
-        this.gameWidth = 7392;
+        ///////////////////////////////////////////////////////////////////////////
+        // BACKGROUNDS (TWO IMAGES) => for seamless scrolling
+        ///////////////////////////////////////////////////////////////////////////
+        // Each is 7335px wide, placed side-by-side. We'll wrap them left->right each wave.
+        this.background1 = this.add.image(0, 0, 'background').setOrigin(0, 0).setDepth(-9999);
+        this.background2 = this.add.image(7335, 0, 'background').setOrigin(0, 0).setDepth(-9999);
+
+        // We'll do 5 sections, each 1024 wide => 5120 total. Past that, normally black.
+        this.gameWidth = 7335;
         this.totalSections = 5;
         this.sectionWidth = 1024;
         this.currentSection = 0;
 
-        // Add your 7392×766 background at (0,0)
-        this.background = this.add.image(0, 0, 'background').setOrigin(0, 0);
-        this.background.setDepth(-9999);
-
-        // Road area => clamp Y
+        ///////////////////////////////////////////////////////////////////////////
+        // ROAD & PLAYER
+        ///////////////////////////////////////////////////////////////////////////
         this.roadTop = this.scale.height - 275;
         this.roadBottom = this.scale.height - 100;
 
-        // Player
-        this.player = this.add.sprite(50, this.roadBottom, 'Idle').setScale(1.5);
-        this.player.setDepth(9999);
-
+        this.player = this.add.sprite(50, this.roadBottom, 'Idle').setScale(1.5).setDepth(9999);
         this.isJumping = false;
         this.isAttacking = false;
 
-        // Keyboard
+        ///////////////////////////////////////////////////////////////////////////
+        // KEYBOARD
+        ///////////////////////////////////////////////////////////////////////////
         this.cursors = this.input.keyboard.addKeys({
             left: Phaser.Input.Keyboard.KeyCodes.LEFT,
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
@@ -78,10 +87,14 @@ export class Game extends Scene {
             attack: Phaser.Input.Keyboard.KeyCodes.PERIOD
         });
 
-        // Projectiles array
+        ///////////////////////////////////////////////////////////////////////////
+        // PROJECTILES
+        ///////////////////////////////////////////////////////////////////////////
         this.bloodProjectiles = [];
 
-        // Create animations
+        ///////////////////////////////////////////////////////////////////////////
+        // CREATE ANIMATIONS (guard => only once)
+        ///////////////////////////////////////////////////////////////////////////
         this.createAnimations();
         this.player.play('Idle');
 
@@ -89,8 +102,6 @@ export class Game extends Scene {
         this.player.on('animationcomplete-Attack_1', () => {
             if (this.isAttacking) {
                 console.log('[Attack_1 complete] => spawn projectile');
-
-                // Play blood-charge-fire sound:
                 this.bloodChargeSound.play();
 
                 const offsetX = this.player.flipX ? -30 : 30;
@@ -108,7 +119,9 @@ export class Game extends Scene {
         // Crisp
         this.cameras.main.roundPixels = true;
 
-        // Wave system & UI
+        ///////////////////////////////////////////////////////////////////////////
+        // UI & WAVES
+        ///////////////////////////////////////////////////////////////////////////
         this.createPlayerSoulUI();
         this.createKillsUI();
         this.initWaveSystem();
@@ -118,7 +131,16 @@ export class Game extends Scene {
         const dt = delta / 1000;
         const speed = this.cursors.shift.isDown ? 200 : 120;
 
-        // Horizontal movement
+        // 1) If player is "dead", skip movement logic:
+        if (this.playerDead) {
+            // We can still do wave transitions so the game can end or proceed
+            this.handleSectionTransition();
+            return;
+        }
+
+        ///////////////////////////////////////////////////////////////////////////
+        // PLAYER MOVEMENT
+        ///////////////////////////////////////////////////////////////////////////
         let movingHoriz = false;
         if ((this.cursors.left.isDown || this.cursors.A.isDown) && !this.isAttacking) {
             movingHoriz = true;
@@ -131,12 +153,11 @@ export class Game extends Scene {
             this.player.flipX = false;
         }
 
-        // (A) Prevent walking off the left edge:
+        // Prevent walking off the left edge
         if (this.player.x < 0) {
             this.player.x = 0;
         }
 
-        // Vertical
         let movingVert = false;
         if ((this.cursors.up.isDown || this.cursors.W.isDown) && !this.isAttacking) {
             movingVert = true;
@@ -166,7 +187,9 @@ export class Game extends Scene {
             }
         }
 
-        // Jump
+        ///////////////////////////////////////////////////////////////////////////
+        // JUMP
+        ///////////////////////////////////////////////////////////////////////////
         if (Phaser.Input.Keyboard.JustDown(this.cursors.space) && !this.isJumping && !this.isAttacking) {
             this.isJumping = true;
             this.player.play('Jump', true);
@@ -196,7 +219,9 @@ export class Game extends Scene {
             });
         }
 
-        // Attack => single image projectile
+        ///////////////////////////////////////////////////////////////////////////
+        // ATTACK
+        ///////////////////////////////////////////////////////////////////////////
         if (Phaser.Input.Keyboard.JustDown(this.cursors.attack) && !this.isAttacking && !this.isJumping) {
             this.isAttacking = true;
             this.player.play('Attack_1', true);
@@ -214,7 +239,9 @@ export class Game extends Scene {
             });
         }
 
-        // Move projectiles
+        ///////////////////////////////////////////////////////////////////////////
+        // PROJECTILES
+        ///////////////////////////////////////////////////////////////////////////
         const totalWidth = this.totalSections * this.sectionWidth; // 5120
         for (let i = this.bloodProjectiles.length - 1; i >= 0; i--) {
             const p = this.bloodProjectiles[i];
@@ -225,22 +252,103 @@ export class Game extends Scene {
             }
         }
 
-        // Waves & zombies
+        ///////////////////////////////////////////////////////////////////////////
+        // DROPS => PICKUP LOGIC
+        ///////////////////////////////////////////////////////////////////////////
+        this.updateDrops(dt);
+
+        ///////////////////////////////////////////////////////////////////////////
+        // WAVES & ZOMBIES
+        ///////////////////////////////////////////////////////////////////////////
         this.updateZombies(dt);
         this.checkProjectileHits();
         this.handleSectionTransition();
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // ANIMATIONS
+    // DROPS (FLOATING, SPINNING, SHADOW, PICKUP)
+    ///////////////////////////////////////////////////////////////////////////
+    updateDrops(dt) {
+        for (let i = this.drops.length - 1; i >= 0; i--) {
+            const d = this.drops[i];
+
+            // Keep shadow in sync
+            d.shadow.x = d.x;
+            d.shadow.y = d.y + 12;
+
+            // If close => pick up
+            const dist = Phaser.Math.Distance.Between(d.x, d.y, this.player.x, this.player.y);
+            if (dist < 40) {
+                // If it's soul => +25
+                if (d.isSoul) {
+                    console.log('Picked up Soul => +25');
+                    this.playerSoul = Math.min(this.playerSoul + 25, 100);
+                    this.updatePlayerSoulUI();
+                }
+                // If it's wynx => do something
+                else if (d.isWynx) {
+                    console.log('Picked up WYNX => premium currency?');
+                }
+                // Destroy
+                d.shadow.destroy();
+                d.destroy();
+                this.drops.splice(i, 1);
+            }
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // MAKE DROP FLOAT / SPIN
+    ///////////////////////////////////////////////////////////////////////////
+    makeDropFloat(drop) {
+        // Add a simple black ellipse as a shadow
+        drop.shadow = this.add.ellipse(drop.x, drop.y + 12, 30, 12, 0x000000, 0.3)
+            .setDepth(drop.depth - 1);
+
+        // Spin
+        this.tweens.add({
+            targets: drop,
+            angle: 360,
+            duration: 1500,
+            repeat: -1
+        });
+
+        // Float up/down
+        this.tweens.add({
+            targets: drop,
+            y: '-=5',
+            yoyo: true,
+            repeat: -1,
+            duration: 800,
+            ease: 'Sine.easeInOut'
+        });
+
+        // Add to array so we can check for pickup
+        this.drops.push(drop);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // ANIMATIONS (guard => only once)
     ///////////////////////////////////////////////////////////////////////////
     createAnimations() {
+        if (this.anims.get('Idle')) {
+            return; // skip re-creating
+        }
+
         // Player
         this.anims.create({ key: 'Idle',     frames: this.anims.generateFrameNumbers('Idle'),     frameRate: 6,  repeat: -1 });
         this.anims.create({ key: 'Walk',     frames: this.anims.generateFrameNumbers('Walk'),     frameRate: 10, repeat: -1 });
         this.anims.create({ key: 'Run',      frames: this.anims.generateFrameNumbers('Run'),      frameRate: 14, repeat: -1 });
         this.anims.create({ key: 'Jump',     frames: this.anims.generateFrameNumbers('Jump'),     frameRate: 10, repeat: 0  });
         this.anims.create({ key: 'Attack_1', frames: this.anims.generateFrameNumbers('Attack_1'), frameRate: 12, repeat: 0  });
+
+        // **NEW**: Player_Dead => uses the 'Dead' spritesheet for the player
+        this.anims.create({
+            key: 'Player_Dead',
+            frames: this.anims.generateFrameNumbers('Dead'), // Make sure Preloader loads it
+            frameRate: 6,
+            repeat: 0
+        });
 
         // Zombie1
         this.anims.create({ key: "Zombie1_Idle",   frames: this.anims.generateFrameNumbers("Zombie1_Idle"),   frameRate:6, repeat:-1 });
@@ -270,7 +378,7 @@ export class Game extends Scene {
         this.anims.create({ key: "Zombie4_Hurt",   frames: this.anims.generateFrameNumbers("Zombie4_Hurt"),   frameRate:8, repeat:0 });
         this.anims.create({ key: "Zombie4_Dead",   frames: this.anims.generateFrameNumbers("Zombie4_Dead"),   frameRate:6, repeat:0 });
 
-        // Projectile animation
+        // Projectile
         this.anims.create({
             key: 'Blood_Charge_Anim',
             frames: this.anims.generateFrameNumbers('Blood_Charge', { start: 0, end: 2 }),
@@ -330,9 +438,9 @@ export class Game extends Scene {
         const waveCycle = Math.floor((this.waveNumber -1)/10);
 
         const baseBars=2, baseSpeed=40, baseDamage=10;
-        const healthMult= 2** waveCycle;    // 1,2,4,...
-        const speedMult= 1 + 0.25* waveCycle; // waveCycle=1 => 1.25
-        const damageMult= 2** waveCycle;    // 1,2,4,...
+        const healthMult= 2** waveCycle;    
+        const speedMult= 1 + 0.25* waveCycle; 
+        const damageMult= 2** waveCycle;     
 
         const waveBars= baseBars* healthMult;
         const waveSpeed= baseSpeed* speedMult;
@@ -355,7 +463,6 @@ export class Game extends Scene {
 
         // spawn at right edge of the *current* stage
         const spawnX = this.sectionWidth - 50;
-
         const spawnY= Phaser.Math.Between(this.roadTop, this.roadBottom);
 
         const z= this.add.sprite(spawnX, spawnY, `Zombie${type}_Idle`).setDepth(9999);
@@ -392,11 +499,14 @@ export class Game extends Scene {
     updateZombies(dt) {
         for(let i=this.zombies.length-1; i>=0; i--){
             const z= this.zombies[i];
+            // Guard if destroyed
+            if(!z || !z.anims) continue;
+
             if(z.isDead){
                 // remove if dead anim done
                 if(z.anims.currentAnim && z.anims.currentAnim.key.includes("Dead") && !z.anims.isPlaying){
                     // Stop & destroy movement sound
-                    if (z.movementSound) {
+                    if(z.movementSound){
                         z.movementSound.stop();
                         z.movementSound.destroy();
                     }
@@ -409,15 +519,34 @@ export class Game extends Scene {
                     this.waveZombiesLeft--;
                     this.kills++;
                     this.updateKillsUI();
+
+                    // 0.5% => WYNX, 5% => soul
+                    const dropChance = Phaser.Math.Between(1, 1000);
+                    if(dropChance <= 5){
+                        // WYNX
+                        const wynx = this.add.sprite(z.x, z.y, 'wynx-token').setDepth(9999);
+                        wynx.isWynx = true;
+                        this.makeDropFloat(wynx);
+                    }
+                    else if(dropChance <= 55){
+                        // soul
+                        const soul = this.add.sprite(z.x, z.y, 'soul-restore').setDepth(9999);
+                        soul.isSoul = true;
+                        this.makeDropFloat(soul);
+                    }
+
                     if(this.waveZombiesLeft<=0){
                         this.waveDone= true;
                         console.log('[updateZombies] wave done => waveZombiesLeft=0 => waveDone=true');
-
-                        // Show the GO! sign & flash
                         this.goSign.setVisible(true);
                         this.goSignTween.play();
                     }
                 }
+                continue;
+            }
+
+            // skip hits if soul=0 or playerDead
+            if(this.playerSoul<=0 || this.playerDead){
                 continue;
             }
 
@@ -445,10 +574,15 @@ export class Game extends Scene {
             // if close => attack
             const dist= Phaser.Math.Distance.Between(z.x,z.y, this.player.x,this.player.y);
             if(dist<40 && !z.isAttacking){
+                // guard
+                if(!z.scene || !z.anims){
+                    continue;
+                }
+
                 z.isAttacking= true;
                 z.play(`Zombie${z.type}_Attack`);
                 z.once('animationcomplete', ()=> {
-                    if(!z.isDead){
+                    if(!z.isDead && !this.playerDead && this.playerSoul>0){
                         this.playerSoul-= z.damage;
                         if(this.playerSoul<0) this.playerSoul=0;
                         this.updatePlayerSoulUI();
@@ -458,12 +592,18 @@ export class Game extends Scene {
                             z.play(`Zombie${z.type}_Walk`);
                         }
 
-                        // if soul=0 => game over
-                        if(this.playerSoul<=0){
-                            console.log('Game Over => fade => scene start');
-                            this.cameras.main.fadeOut(1000,0,0,0);
-                            this.cameras.main.once('camerafadeoutcomplete', ()=>{
-                                this.scene.start('GameOver');
+                        // Instead of immediate fade => do Player_Dead anim
+                        if(this.playerSoul<=0 && !this.playerDead){
+                            console.log('Player soul=0 => play Player_Dead anim...');
+                            this.playerDead = true;
+                            this.player.play('Player_Dead');
+
+                            // Once that anim is done => fade out
+                            this.player.once('animationcomplete', () => {
+                                this.cameras.main.fadeOut(1000,0,0,0);
+                                this.cameras.main.once('camerafadeoutcomplete', ()=>{
+                                    this.scene.start('GameOver');
+                                });
                             });
                         }
                     }
@@ -472,34 +612,29 @@ export class Game extends Scene {
         }
     }
 
-    // <------------------ MAKE SURE THIS FUNCTION EXISTS ------------------>
     checkProjectileHits() {
-        // If the scene is no longer active (e.g. game over), skip
         if(!this.scene.isActive()) return;
 
         for(let i=this.bloodProjectiles.length-1; i>=0; i--){
             const p= this.bloodProjectiles[i];
             for(let z of this.zombies){
-                if(z.isDead) continue;
+                if(!z || !z.anims || z.isDead) continue;
+
                 const dist= Phaser.Math.Distance.Between(p.x,p.y, z.x,z.y);
                 if(dist<30){
-                    // hit
                     p.destroy();
                     this.bloodProjectiles.splice(i,1);
 
                     z.bars--;
                     z.play(`Zombie${z.type}_Hurt`);
-
-                    // PLAY RANDOM HURT SOUND
                     Phaser.Utils.Array.GetRandom(this.zombieHurtSounds).play();
 
                     if(z.bars<=0){
                         z.isDead= true;
                         z.play(`Zombie${z.type}_Dead`);
                     } else {
-                        // after short delay => walk
                         this.time.delayedCall(300, ()=>{
-                            if(!z.isDead && !z.isAttacking){
+                            if(!z.isDead && !z.isAttacking && z.anims){
                                 z.play(`Zombie${z.type}_Walk`);
                             }
                         });
@@ -523,7 +658,6 @@ export class Game extends Scene {
 
         // wave done => if x≥1000 => shift once
         if(this.player.x>=1000 && !this.stageTransitioning){
-            // Hide the GO! sign & stop flashing
             this.goSign.setVisible(false);
             this.goSignTween.pause();
             this.goSign.setAlpha(1);
@@ -536,17 +670,31 @@ export class Game extends Scene {
             this.currentSection= (this.currentSection+1)% this.totalSections;
 
             // keep them on top
-            this.background.setDepth(-9999);
+            this.background1.setDepth(-9999);
+            this.background2.setDepth(-9999);
             this.player.setDepth(9999);
             this.bloodProjectiles.forEach(b=> b.setDepth(9999));
             this.zombies.forEach(z=> z.setDepth(9999));
+            this.drops.forEach(d=> d.setDepth(9999));
+            if(this.goSign) this.goSign.setDepth(9999);
 
+            // SHIFT BOTH BACKGROUNDS & ENTITIES => WRAP THEM
             this.tweens.add({
-                targets:[this.background, this.player, ...this.bloodProjectiles, ...this.zombies],
-                x:(target)=> target.x- shift,
-                duration:1000,
-                ease:'Sine.easeInOut',
-                onComplete:()=>{
+                targets:[this.background1, this.background2, this.player, ...this.bloodProjectiles, ...this.zombies, ...this.drops],
+                x: (target) => target.x - shift,
+                duration: 1000,
+                ease: 'Sine.easeInOut',
+                onUpdate: () => {
+                    // If background1 goes past -7335 => wrap it to background2.x+7335
+                    if(this.background1.x <= -7335){
+                        this.background1.x = this.background2.x + 7335;
+                    }
+                    // If background2 goes past -7335 => wrap it to background1.x+7335
+                    if(this.background2.x <= -7335){
+                        this.background2.x = this.background1.x + 7335;
+                    }
+                },
+                onComplete: () => {
                     this.waveNumber++;
                     this.waveDone= false;
                     this.startWave();

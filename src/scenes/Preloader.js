@@ -25,6 +25,11 @@ this.load.audio("zombiehurt3", "assets/zombiehurt3.mp3");
 this.load.audio("bloodchargefire", "assets/bloodchargefire.mp3");
 this.load.audio("zombiemovementsound", "assets/zombiemovementsound.mp3");
 
+// Soul restore & WYNX token
+this.load.image("soul-restore", "assets/soul-restore.png");
+this.load.image("wynx-token", "assets/wynx-token.png");
+
+
 
 
         // **Load Character Spritesheets** (Countess)

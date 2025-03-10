@@ -21,6 +21,11 @@
     },
     "homepage": "https://github.com/phaserjs/template-webpack#readme",
     "dependencies": {
+        "@wharfkit/session": "^1.5.1",
+        "@wharfkit/wallet-plugin-anchor": "^1.4.0",
+        "@wharfkit/wallet-plugin-cloudwallet": "1.4.0",
+        "@wharfkit/wallet-plugin-wombat": "^1.5.1",
+        "@wharfkit/web-renderer": "^1.4.1",
         "ethers": "^6.13.5",
         "phaser": "^3.87.0"
     },
@@ -40,7 +45,6 @@
         "webpack-dev-server": "^5.2.0",
         "webpack-merge": "^5.10.0"
     },
-    "description": "**Cosmic Cuddlies** is an enchanting game where you explore vibrant cosmic worlds, interact with cute creatures, and unlock magical rewards. Designed with custom assets, delightful music, and seamless gameplay, it's a journey through the cosmos like no other!",
+    "description": "!",
     "keywords": []
 }
-

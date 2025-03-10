@@ -56,7 +56,13 @@ export class Preloader extends Scene {
         });
         this.load.spritesheet("Blood_Charge", "assets/sprites/Countess_Vampire/Blood_Charge_1.png", {
             frameWidth: 64, frameHeight: 48
+        
         });
+
+        this.load.spritesheet("Dead", "assets/sprites/Countess_Vampire/Dead.png", {
+            frameWidth: 128,
+            frameHeight: 128
+          }); 
 
         // **Zombie Spritesheets**
         for (let i = 1; i <= 4; i++) {

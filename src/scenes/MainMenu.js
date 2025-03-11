@@ -32,7 +32,7 @@ export class MainMenu extends Scene {
     super("MainMenu")
   }
 
-  create() {
+  async create() {
     //---------------------------------------------------------------------
     // 1) BACKGROUND
     //---------------------------------------------------------------------
@@ -134,10 +134,58 @@ export class MainMenu extends Scene {
     // Track user data
     this.userName = null
     this.session = null
+
+    // (A) Try restoring an existing session from localStorage
+    await this.restoreSession()
   }
 
   // ----------------------------------------------------------------
-  // (A) MULTI-WALLET LOGIN => Anchor, Cloud, Wombat
+  // (A1) RESTORE SESSION => if found, skip login + do NFT check
+  // ----------------------------------------------------------------
+  async restoreSession() {
+    try {
+      const existingSession = await this.sessionKit.restore()
+      if (existingSession) {
+        this.session = existingSession
+        console.log("Session restored =>", this.session)
+
+        const actorName = this.session.permissionLevel?.actor
+        if (!actorName) {
+          console.warn("Session restored but no actor found =>", this.session.permissionLevel)
+          return
+        }
+
+        this.userName = actorName.toString()
+        console.log("User from restored session =>", this.userName)
+
+        // Check if user has the required NFT
+        const ownsNFT = await this.checkUserHasNFT(this.userName)
+        if (!ownsNFT) {
+          alert(
+            "You do not own any of the required Undead Pinups NFT(s)!\n" +
+            "Buy one here:\n" +
+            "https://wax.atomichub.io/market?primary_chain=wax-mainnet&collection_name=undeadpinups&blockchain=wax-mainnet&order=desc&sort=created#sales"
+          )
+          return
+        }
+
+        // If NFT check passes => show the begin button & top bar
+        this.loginButton.setVisible(false)
+        this.freelanceButton.setVisible(true)
+        this.topBar.setVisible(true)
+        this.userText.setVisible(true)
+        this.logoutText.setVisible(true)
+        this.userText.setText(`User: ${this.userName} | WYNX: ???`)
+      } else {
+        console.log("No existing session found => user must click Login")
+      }
+    } catch (err) {
+      console.error("Error restoring session =>", err)
+    }
+  }
+
+  // ----------------------------------------------------------------
+  // (B) MULTI-WALLET LOGIN => Anchor, Cloud, Wombat
   // ----------------------------------------------------------------
   async handleMultiWalletLogin() {
     try {
@@ -167,7 +215,7 @@ export class MainMenu extends Scene {
         this.session = response.session
         console.log("Session =>", this.session)
 
-        // FIX: Read from session.permissionLevel
+        // Read from session.permissionLevel
         const actorName = this.session.permissionLevel?.actor
         if (!actorName) {
           console.error("No actor found in session.permissionLevel =>", this.session.permissionLevel)
@@ -204,7 +252,7 @@ export class MainMenu extends Scene {
   }
 
   // ----------------------------------------------------------------
-  // (B) CHECK NFT => Using AtomicAssets API
+  // (C) CHECK NFT => Using AtomicAssets API
   // ----------------------------------------------------------------
   async checkUserHasNFT(accountName) {
     try {
@@ -235,7 +283,7 @@ export class MainMenu extends Scene {
   }
 
   // ----------------------------------------------------------------
-  // (C) LOGOUT => Clear user session + reset UI
+  // (D) LOGOUT => Clear user session + reset UI
   // ----------------------------------------------------------------
   async logout() {
     console.log("Logout => clearing user session")

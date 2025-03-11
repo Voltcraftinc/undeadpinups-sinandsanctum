@@ -21,6 +21,7 @@
     },
     "homepage": "https://github.com/phaserjs/template-webpack#readme",
     "dependencies": {
+        "@supabase/supabase-js": "^2.49.1",
         "@wharfkit/session": "^1.5.1",
         "@wharfkit/wallet-plugin-anchor": "^1.4.0",
         "@wharfkit/wallet-plugin-cloudwallet": "1.4.0",

@@ -17,6 +17,7 @@ export class Preloader extends Scene {
         this.load.audio("backgroundMusic", "assets/starlighthollow-mellow.mp3");
         this.load.image("muteButton", "assets/mute.png");
         this.load.image("goSign", "assets/go-icon.png");
+        this.load.image("standingsButton", "assets/standings-button.png");
 
         // **Buttons**
         this.load.image("freelanceButton", "assets/freelancebutton.png");

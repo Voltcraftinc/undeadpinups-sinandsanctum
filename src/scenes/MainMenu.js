@@ -53,12 +53,13 @@ export class MainMenu extends Scene {
     }
 
     //---------------------------------------------------------------------
-    // 3) LOGIN BUTTON
+    // 3) LOGIN BUTTON (hidden if session is restored)
     //---------------------------------------------------------------------
     this.loginButton = this.add
       .image(this.scale.width / 2, this.scale.height / 3, "loginButton")
       .setInteractive()
       .setScale(1)
+      .setVisible(false) // Hide by default, we’ll decide after restore
 
     this.loginButton.on("pointerdown", () => {
       this.handleMultiWalletLogin()
@@ -68,7 +69,7 @@ export class MainMenu extends Scene {
     // 4) FREELANCE (BEGIN) BUTTON => hidden until user logs in + NFT check
     //---------------------------------------------------------------------
     this.freelanceButton = this.add
-      .image(this.scale.width / 2, this.scale.height / 1.7, "freelanceButton")
+      .image(this.scale.width / 2, this.scale.height / 2.3, "freelanceButton")
       .setInteractive()
       .setScale(1.1)
       .setVisible(false)
@@ -85,6 +86,28 @@ export class MainMenu extends Scene {
 
     this.freelanceButton.on("pointerdown", () => {
       this.scene.start("Game")
+    })
+
+    //---------------------------------------------------------------------
+    // 4b) STANDINGS BUTTON => only visible if logged in
+    //---------------------------------------------------------------------
+    this.standingsButton = this.add
+      .image(this.scale.width / 2, this.scale.height / 1.6, "standingsButton")
+      .setInteractive()
+      .setScale(1.1)
+      .setVisible(false)
+
+    this.tweens.add({
+      targets: this.standingsButton,
+      y: this.standingsButton.y + 10,
+      yoyo: true,
+      repeat: -1,
+      duration: 800,
+      ease: "Sine.easeInOut",
+    })
+
+    this.standingsButton.on("pointerdown", () => {
+      this.scene.start("Standings")
     })
 
     //---------------------------------------------------------------------
@@ -129,58 +152,66 @@ export class MainMenu extends Scene {
         new WalletPluginCloudWallet(),
         new WalletPluginWombat()
       ]
+      // By default, it uses BrowserLocalStorage to store sessions
     })
 
     // Track user data
     this.userName = null
     this.session = null
 
-    // (A) Try restoring an existing session from localStorage
+    // 7) Attempt to restore an existing session from localStorage
     await this.restoreSession()
   }
 
   // ----------------------------------------------------------------
-  // (A1) RESTORE SESSION => if found, skip login + do NFT check
+  // (A) RESTORE SESSION => skip login if we have a valid session
   // ----------------------------------------------------------------
   async restoreSession() {
     try {
-      const existingSession = await this.sessionKit.restore()
-      if (existingSession) {
-        this.session = existingSession
-        console.log("Session restored =>", this.session)
-
-        const actorName = this.session.permissionLevel?.actor
-        if (!actorName) {
-          console.warn("Session restored but no actor found =>", this.session.permissionLevel)
-          return
-        }
-
-        this.userName = actorName.toString()
-        console.log("User from restored session =>", this.userName)
-
-        // Check if user has the required NFT
-        const ownsNFT = await this.checkUserHasNFT(this.userName)
-        if (!ownsNFT) {
-          alert(
-            "You do not own any of the required Undead Pinups NFT(s)!\n" +
-            "Buy one here:\n" +
-            "https://wax.atomichub.io/market?primary_chain=wax-mainnet&collection_name=undeadpinups&blockchain=wax-mainnet&order=desc&sort=created#sales"
-          )
-          return
-        }
-
-        // If NFT check passes => show the begin button & top bar
-        this.loginButton.setVisible(false)
-        this.freelanceButton.setVisible(true)
-        this.topBar.setVisible(true)
-        this.userText.setVisible(true)
-        this.logoutText.setVisible(true)
-        this.userText.setText(`User: ${this.userName} | WYNX: ???`)
-      } else {
-        console.log("No existing session found => user must click Login")
+      const restoredSession = await this.sessionKit.restore()
+      if (!restoredSession) {
+        console.log("No existing session found => show login button.")
+        // Show login button if no session
+        this.loginButton.setVisible(true)
+        return
       }
+
+      // We have a valid session => set internal data
+      this.session = restoredSession
+      console.log("Session restored =>", this.session)
+
+      // Actor name from session.permissionLevel
+      const actorName = this.session.permissionLevel?.actor
+      if (!actorName) {
+        console.warn("restoreSession => no actor found in permissionLevel")
+        // Show login button so they can re-login
+        this.loginButton.setVisible(true)
+        return
+      }
+
+      this.userName = actorName.toString()
+      console.log("Session restored => userName =", this.userName)
+
+      // Check NFT
+      const ownsNFT = await this.checkUserHasNFT(this.userName)
+      if (!ownsNFT) {
+        alert(
+          "You do not own any of the required Undead Pinups NFT(s)!\n" +
+          "Buy one here:\n" +
+          "https://wax.atomichub.io/market?primary_chain=wax-mainnet&collection_name=undeadpinups&blockchain=wax-mainnet&order=desc&sort=created#sales"
+        )
+        // If user lacks NFT, we could still let them remain “logged in,”
+        // but no “Begin” button is shown
+        this.loginButton.setVisible(false)
+        return
+      }
+
+      // If NFT check passes => show the begin button & top bar
+      this.showLoggedInUI()
     } catch (err) {
-      console.error("Error restoring session =>", err)
+      console.error("restoreSession error:", err)
+      // If error => show login
+      this.loginButton.setVisible(true)
     }
   }
 
@@ -200,9 +231,7 @@ export class MainMenu extends Scene {
             {
               account: "eosio.null",
               name: "nonce",
-              authorization: [
-                { actor: "", permission: "active" }
-              ],
+              authorization: [{ actor: "", permission: "active" }],
               data: { value: `nonce-${Date.now()}` }
             }
           ]
@@ -215,7 +244,7 @@ export class MainMenu extends Scene {
         this.session = response.session
         console.log("Session =>", this.session)
 
-        // Read from session.permissionLevel
+        // Actor name from session.permissionLevel
         const actorName = this.session.permissionLevel?.actor
         if (!actorName) {
           console.error("No actor found in session.permissionLevel =>", this.session.permissionLevel)
@@ -237,12 +266,7 @@ export class MainMenu extends Scene {
         }
 
         // If NFT check passes => show the begin button & top bar
-        this.loginButton.setVisible(false)
-        this.freelanceButton.setVisible(true)
-        this.topBar.setVisible(true)
-        this.userText.setVisible(true)
-        this.logoutText.setVisible(true)
-        this.userText.setText(`User: ${this.userName} | WYNX: ???`)
+        this.showLoggedInUI()
       } else {
         console.error("No session returned from login =>", response)
       }
@@ -283,7 +307,20 @@ export class MainMenu extends Scene {
   }
 
   // ----------------------------------------------------------------
-  // (D) LOGOUT => Clear user session + reset UI
+  // (D) SHOW LOGGED IN UI => Hide login, show freelance + top bar
+  // ----------------------------------------------------------------
+  showLoggedInUI() {
+    this.loginButton.setVisible(false)
+    this.freelanceButton.setVisible(true)
+    this.standingsButton.setVisible(true) // Show the new button
+    this.topBar.setVisible(true)
+    this.userText.setVisible(true)
+    this.logoutText.setVisible(true)
+    this.userText.setText(`User: ${this.userName} | WYNX: ???`)
+  }
+
+  // ----------------------------------------------------------------
+  // (E) LOGOUT => Clear user session + reset UI
   // ----------------------------------------------------------------
   async logout() {
     console.log("Logout => clearing user session")
@@ -301,6 +338,7 @@ export class MainMenu extends Scene {
     this.userText.setVisible(false)
     this.logoutText.setVisible(false)
     this.freelanceButton.setVisible(false)
+    this.standingsButton.setVisible(false)
     this.loginButton.setVisible(true)
   }
 }

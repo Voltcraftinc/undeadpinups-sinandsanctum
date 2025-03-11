@@ -465,7 +465,8 @@ export class Game extends Scene {
         const spawnX = this.sectionWidth - 50;
         const spawnY= Phaser.Math.Between(this.roadTop, this.roadBottom);
 
-        const z= this.add.sprite(spawnX, spawnY, `Zombie${type}_Idle`).setDepth(9999);
+        const z = this.add.sprite(spawnX, spawnY, `Zombie${type}_Idle`).setScale(1.4).setDepth(9999);
+
         z.play(`Zombie${type}_Idle`);
 
         // Movement sound => loop

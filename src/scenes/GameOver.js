@@ -1,6 +1,6 @@
 // src/scenes/GameOver.js
 import { Scene } from 'phaser'
-import { supabase } from '../supabaseClient' // Ensure this path is correct
+import { supabase } from '../supabaseClient' // Make sure path is correct
 
 export class GameOver extends Scene {
   constructor() {
@@ -8,12 +8,11 @@ export class GameOver extends Scene {
   }
 
   create(data) {
-    // Attempt to save stats if data was passed in
+    // If data was passed from Game, attempt to save
     if (data && data.waxAccount) {
       this.saveStatsToDatabase(data)
     }
 
-    // Existing "Game Over" UI
     this.cameras.main.setBackgroundColor('#000000')
 
     const centerX = this.scale.width / 2
@@ -37,7 +36,6 @@ export class GameOver extends Scene {
       })
       .setOrigin(0.5)
 
-    // Return to MainMenu
     this.input.once('pointerdown', () => {
       this.scene.start('MainMenu')
     })
@@ -45,31 +43,29 @@ export class GameOver extends Scene {
 
   async saveStatsToDatabase(data) {
     try {
+      // data might look like: { waxAccount: "wynxcbyte.gm", kills: 2, waveReached: 2, wynxEarned: 1, ... }
       const { error } = await supabase
         .from('players')
         .upsert(
           [
             {
-              wax_account:  data.waxAccount   || null,
-              player_name:  data.playerName   || null,
-              kills:        data.kills        || 0,
-              wynx_earned:  data.wynxEarned   || 0,
-              distance:     data.distance     || 0,
-              wave_reached: data.waveReached  || 0,
-              best_score:   data.bestScore    || 0,
-              nfts_found:   data.nftsFound    || 0,
+              wax_account: data.waxAccount || null,
+              player_name: data.playerName || null,
+              kills: data.kills || 0,
+              wynx_earned: data.wynxEarned || 0,
+              distance: data.distance || 0,
+              wave_reached: data.waveReached || 0,
+              best_score: data.bestScore || 0,
+              nfts_found: data.nftsFound || 0,
               achievements: data.achievements || {},
-              inventory:    data.inventory    || {},
-              xp_level:     data.xpLevel      || 0,
-              time_played:  data.timePlayed   || 0,
-              last_login:   new Date().toISOString(),
-              // If you want to manually set created_at or updated_at:
-              // created_at: new Date().toISOString(),
-              // updated_at: new Date().toISOString(),
+              inventory: data.inventory || {},
+              xp_level: data.xpLevel || 0,
+              time_played: data.timePlayed || 0,
+              last_login: new Date().toISOString(),
             },
           ],
           {
-            onConflict: 'wax_account', // Make sure wax_account is unique in your table
+            onConflict: 'wax_account', // "wax_account" must be unique in your Supabase "players" table
           }
         )
 

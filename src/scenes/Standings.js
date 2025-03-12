@@ -1,6 +1,6 @@
 // src/scenes/Standings.js
 import { Scene } from "phaser"
-import { supabase } from "../supabaseClient" // Path must match your project
+import { supabase } from "../supabaseClient.js" // Must match your file name & path
 
 export class Standings extends Scene {
   constructor() {
@@ -24,7 +24,7 @@ export class Standings extends Scene {
       })
       .setOrigin(0.5)
 
-    // Wait to fetch data from Supabase
+    // Fetch leaderboard data
     const leaderboardData = await this.fetchLeaderboardData()
 
     if (!leaderboardData || leaderboardData.length === 0) {
@@ -37,14 +37,18 @@ export class Standings extends Scene {
         .setOrigin(0.5)
     } else {
       // Table Header
-      const headerStyle = { fontFamily: "Arial Black", fontSize: 22, color: "#ffff00" }
+      const headerStyle = {
+        fontFamily: "Arial Black",
+        fontSize: 22,
+        color: "#ffff00",
+      }
       this.add.text(100, 120, "User", headerStyle)
       this.add.text(300, 120, "WYNX", headerStyle)
       this.add.text(430, 120, "NFTs", headerStyle)
       this.add.text(530, 120, "Vanquished", headerStyle) // kills
       this.add.text(680, 120, "Wave", headerStyle)
 
-      // Display top 10 rows
+      // Show top 10
       const rowStyle = { fontFamily: "Arial", fontSize: 20, color: "#ffffff" }
       leaderboardData.forEach((row, index) => {
         const yPos = 160 + index * 30
@@ -56,7 +60,7 @@ export class Standings extends Scene {
       })
     }
 
-    // Add a "Back to Menu" text button
+    // "Back to Menu"
     const backText = this.add
       .text(centerX, this.scale.height - 50, "[ Back to Menu ]", {
         fontFamily: "Arial",
@@ -71,13 +75,8 @@ export class Standings extends Scene {
     })
   }
 
-  // --------------------------------------------------
-  // Query the "players" table from Supabase
-  // --------------------------------------------------
   async fetchLeaderboardData() {
     try {
-      // Adjust the 'order' if you want a different sorting
-      // e.g. .order("kills", { ascending: false }) or wave_reached
       const { data, error } = await supabase
         .from("players")
         .select("wax_account, wynx_earned, nfts_found, kills, wave_reached")

@@ -60,6 +60,20 @@
             ]
         },
         {
+            "name": "stake",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "asset_ids",
+                    "type": "uint64[]"
+                }
+            ]
+        },
+        {
             "name": "stake_info",
             "base": "",
             "fields": [
@@ -104,6 +118,11 @@
         {
             "name": "claim",
             "type": "claim",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "stake",
+            "type": "stake",
             "ricardian_contract": ""
         },
         {

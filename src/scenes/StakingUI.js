@@ -7,21 +7,21 @@ import { WalletPluginAnchor } from "@wharfkit/wallet-plugin-anchor";
 import { WalletPluginCloudWallet } from "@wharfkit/wallet-plugin-cloudwallet";
 import { WalletPluginWombat } from "@wharfkit/wallet-plugin-wombat";
 
-// We'll use rexUI plugin for scrollable panels
-// Make sure you have "plugins.scene" in your config referencing "RexUIPlugin"
+// Revert chain calls to wax.greymass.com (for Netlify deploy)
+// Revert IPFS calls to ipfs.atomichub.io
 
 const WAX_CHAINS = [
   {
     id: "1064487b3cd1f44d82c42c1ec67a7e9e66aeb51fd6aa7666b56fdd39c3a2df94",
-    url: "https://wax.greymass.com",
+    url: "https://wax.greymass.com"
   },
   {
     id: "1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4",
-    url: "https://wax.greymass.com",
+    url: "https://wax.greymass.com"
   },
 ];
 
-const CONTRACT_ACCOUNT = "wynxcbyte.gm"; // your contract
+const CONTRACT_ACCOUNT = "wynxcbyte.gm";
 const COLLECTION_NAME = "undeadpinups";
 
 export class StakingUI extends Scene {
@@ -37,7 +37,7 @@ export class StakingUI extends Scene {
     this.add.rectangle(width / 2, height / 2, width, height, 0x400000).setAlpha(0.4);
 
     // Title
-    const title = this.add
+    this.add
       .text(width / 2, 40, "Undead Pinups Staking", {
         fontFamily: "Impact",
         fontSize: "48px",
@@ -51,9 +51,13 @@ export class StakingUI extends Scene {
     // 1) Setup multi-wallet session
     this.sessionKit = new SessionKit({
       appName: "UndeadPinupsStaking",
-      chains: WAX_CHAINS,
+      chains: WAX_CHAINS, // using wax.greymass.com
       ui: new WebRenderer(),
-      walletPlugins: [new WalletPluginAnchor(), new WalletPluginCloudWallet(), new WalletPluginWombat()],
+      walletPlugins: [
+        new WalletPluginAnchor(),
+        new WalletPluginCloudWallet(),
+        new WalletPluginWombat()
+      ],
     });
 
     // 2) Try restore or login
@@ -116,21 +120,16 @@ export class StakingUI extends Scene {
   // A) Blood Drips: on pointermove, spawn a red particle
   // --------------------------------------------------------------------------
   initBloodDrips() {
-    // Instead of using createEmitter, pass our config directly to add.particles
-    // 'redPixel' must be a loaded texture from your Preloader
     this.bloodEmitter = this.add.particles("redPixel", {
       speed: { min: 10, max: 50 },
       lifespan: 2000,
-      scale: { start: 0.4, end: 0.0 },
+      scale: { start: 0.4, end: 0 },
       quantity: 1,
       alpha: { start: 1, end: 0 },
-      // We'll manually emit below
-      active: false // or on: false in older versions
+      active: false
     });
 
-    // Listen for mouse moves and manually emit a particle
     this.input.on("pointermove", (pointer) => {
-      // Even though active=false, we can still manually emit
       this.bloodEmitter.emitParticleAt(pointer.x, pointer.y);
     });
   }
@@ -166,19 +165,16 @@ export class StakingUI extends Scene {
   // C) Load staked + unstaked
   // --------------------------------------------------------------------------
   async loadAllNFTs() {
-    // fetch staked from contract
     this.stakedAssets = await this.fetchStakedNFTs(this.userName);
-    // fetch user’s atomicassets
     this.userNFTs = await this.fetchAtomicAssets(this.userName);
 
-    // filter out staked => unstaked
     const stakedIds = new Set(this.stakedAssets.map((s) => s.asset_id));
     this.unstakedAssets = this.userNFTs.filter((n) => !stakedIds.has(Number(n.asset_id)));
   }
 
   async fetchStakedNFTs(user) {
     try {
-      const url = "https://wax.greymass.com/v1/chain/get_table_rows";
+      const url = "https://wax.greymass.com/v1/chain/get_table_rows"; // revert to greymass
       const body = {
         json: true,
         code: CONTRACT_ACCOUNT,
@@ -222,9 +218,7 @@ export class StakingUI extends Scene {
       y: y + h / 2,
       width: w,
       height: h,
-
-      scrollMode: 0, // vertical
-
+      scrollMode: 0,
       background: this.rexUI.add.roundRectangle(0, 0, 2, 2, 20, 0x000000),
       panel: {
         child: this.rexUI.add.sizer({
@@ -246,7 +240,6 @@ export class StakingUI extends Scene {
       },
     });
 
-    // Add a top label
     this.add
       .text(x, y - 30, titleText, {
         fontSize: "24px",
@@ -261,8 +254,7 @@ export class StakingUI extends Scene {
   // E) Populate Unstaked
   // --------------------------------------------------------------------------
   populateUnstaked() {
-    const panelChild = this.unstakedPanel.getElement("panel"); // the sizer
-    // Stake All button
+    const panelChild = this.unstakedPanel.getElement("panel");
     const stakeAllBtn = this.addFancyText("[Stake All]", 0x00ff00, () => {
       const asset_ids = this.unstakedAssets.map((n) => Number(n.asset_id));
       if (asset_ids.length > 0) this.callStakeAction(asset_ids);
@@ -270,7 +262,7 @@ export class StakingUI extends Scene {
     panelChild.add(stakeAllBtn, { align: "left" });
 
     this.unstakedAssets.forEach((nft) => {
-      const row = this.createNFTRow(nft, false);
+      const row = this.createNFTRow(nft);
       panelChild.add(row, { align: "left", expand: false });
     });
 
@@ -281,8 +273,7 @@ export class StakingUI extends Scene {
   // F) Populate Staked
   // --------------------------------------------------------------------------
   populateStaked() {
-    const panelChild = this.stakedPanel.getElement("panel"); // the sizer
-    // Unstake all
+    const panelChild = this.stakedPanel.getElement("panel");
     const unstakeAllBtn = this.addFancyText("[Unstake All]", 0xff5555, async () => {
       for (let s of this.stakedAssets) {
         await this.callUnstakeAction(s.asset_id);
@@ -301,15 +292,14 @@ export class StakingUI extends Scene {
   // --------------------------------------------------------------------------
   // G) Create row for Unstaked
   // --------------------------------------------------------------------------
-  createNFTRow(nft, isStaked) {
+  createNFTRow(nft) {
     const sizer = this.rexUI.add.sizer({
       orientation: "horizontal",
       space: { left: 10, right: 10, item: 10 },
     });
 
-    // Possibly load image from ipfs
-    let imageKey = `nft_${nft.asset_id}`;
-    let imageUrl = nft.data?.img || nft.template?.immutable_data?.img;
+    const imageKey = `nft_${nft.asset_id}`;
+    const imageUrl = nft.data?.img || nft.template?.immutable_data?.img;
     if (imageUrl) {
       this.load.image(imageKey, `https://ipfs.atomichub.io/ipfs/${imageUrl}`);
       this.load.once("complete", () => {
@@ -319,16 +309,13 @@ export class StakingUI extends Scene {
       });
       this.load.start();
     } else {
-      let fallbackText = this.add
-        .text(0, 0, nft.name || `NFT #${nft.asset_id}`, {
-          fontSize: "16px",
-          color: "#ffffff",
-        })
-        .setOrigin(0, 0.5);
+      let fallbackText = this.add.text(0, 0, nft.name || `NFT #${nft.asset_id}`, {
+        fontSize: "16px",
+        color: "#ffffff",
+      }).setOrigin(0, 0.5);
       sizer.add(fallbackText, { align: "left" });
     }
 
-    // Then a stake button
     const stakeBtn = this.addFancyText("[Stake]", 0x00ff00, () => {
       this.callStakeAction([Number(nft.asset_id)]);
     });
@@ -348,10 +335,10 @@ export class StakingUI extends Scene {
 
     const found = this.userNFTs.find((u) => Number(u.asset_id) === stakedRec.asset_id);
     let imageUrl = null;
-    let imageKey = `nft_${stakedRec.asset_id}`;
     if (found) {
       imageUrl = found.data?.img || found.template?.immutable_data?.img;
     }
+    const imageKey = `nft_${stakedRec.asset_id}`;
     if (imageUrl) {
       this.load.image(imageKey, `https://ipfs.atomichub.io/ipfs/${imageUrl}`);
       this.load.once("complete", () => {
@@ -361,16 +348,13 @@ export class StakingUI extends Scene {
       });
       this.load.start();
     } else {
-      let fallbackText = this.add
-        .text(0, 0, `Staked #${stakedRec.asset_id}`, {
-          fontSize: "16px",
-          color: "#ffffff",
-        })
-        .setOrigin(0, 0.5);
+      let fallbackText = this.add.text(0, 0, `Staked #${stakedRec.asset_id}`, {
+        fontSize: "16px",
+        color: "#ffffff",
+      }).setOrigin(0, 0.5);
       sizer.add(fallbackText, { align: "left" });
     }
 
-    // Claim + Unstake
     const claimBtn = this.addFancyText("[Claim]", 0xffff00, () => {
       this.callClaimAction(stakedRec.asset_id);
     });

@@ -1,0 +1,135 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ",
+    "version": "eosio::abi/1.2",
+    "types": [],
+    "structs": [
+        {
+            "name": "asset_row",
+            "base": "",
+            "fields": [
+                {
+                    "name": "asset_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "owner",
+                    "type": "name"
+                },
+                {
+                    "name": "collection_name",
+                    "type": "name"
+                },
+                {
+                    "name": "schema_name",
+                    "type": "name"
+                },
+                {
+                    "name": "template_id",
+                    "type": "int32"
+                },
+                {
+                    "name": "ram_payer",
+                    "type": "name"
+                },
+                {
+                    "name": "backed_tokens",
+                    "type": "asset[]"
+                },
+                {
+                    "name": "immutable_serialized_data",
+                    "type": "bytes"
+                },
+                {
+                    "name": "mutable_serialized_data",
+                    "type": "bytes"
+                }
+            ]
+        },
+        {
+            "name": "claim",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "asset_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "stake_info",
+            "base": "",
+            "fields": [
+                {
+                    "name": "asset_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "owner",
+                    "type": "name"
+                },
+                {
+                    "name": "template_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "staked_at",
+                    "type": "uint32"
+                },
+                {
+                    "name": "last_claimed",
+                    "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "unstake",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "asset_id",
+                    "type": "uint64"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "claim",
+            "type": "claim",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "unstake",
+            "type": "unstake",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "assets",
+            "type": "asset_row",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "stakes",
+            "type": "stake_info",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "kv_tables": {},
+    "ricardian_clauses": [],
+    "variants": [],
+    "action_results": []
+}

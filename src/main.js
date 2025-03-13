@@ -5,6 +5,9 @@ import { MainMenu } from "./scenes/MainMenu";
 import { Game } from "./scenes/Game";
 import { GameOver } from "./scenes/GameOver";
 import { Standings } from "./scenes/Standings";
+import { StakingUI } from "./scenes/StakingUI";
+import RexUIPlugin from 'phaser3-rex-plugins/templates/ui/ui-plugin.js';
+
 
 const config = {
   type: Phaser.AUTO,
@@ -17,7 +20,17 @@ const config = {
       debug: false,
     },
   },
-  scene: [Boot, Preloader, MainMenu, Game, GameOver, Standings],
+  scene: [Boot, Preloader, MainMenu, Game, GameOver, Standings, StakingUI],
+  
+  plugins: {
+    scene: [
+      {
+        key: 'rexUI',
+        plugin: RexUIPlugin,
+        mapping: 'rexUI'
+      }
+    ]
+  }
 };
 
 if (!window.game) {

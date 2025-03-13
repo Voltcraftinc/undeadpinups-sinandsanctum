@@ -18,6 +18,8 @@ export class Preloader extends Scene {
     this.load.image("muteButton", "assets/mute.png");
     this.load.image("goSign", "assets/go-icon.png");
     this.load.image("standingsButton", "assets/standings-button.png");
+    this.load.image("stakingButton", "assets/staking-button.png");
+
 
     // Buttons
     this.load.image("freelanceButton", "assets/freelancebutton.png");

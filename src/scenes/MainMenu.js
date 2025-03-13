@@ -10,10 +10,10 @@ import { WalletPluginAnchor } from "@wharfkit/wallet-plugin-anchor";
 import { WalletPluginCloudWallet } from "@wharfkit/wallet-plugin-cloudwallet";
 import { WalletPluginWombat } from "@wharfkit/wallet-plugin-wombat";
 
-// The required template IDs to check
+// The required template IDs to check (for "Begin" button):
 const REQUIRED_TEMPLATE_IDS = [877566, 877565, 877564];
 
-// Two WAX mainnet chain definitions
+// WAX chain definitions (Cloud vs Anchor/Wombat):
 const WAX_CHAINS = [
   {
     // Cloud Wallet chain ID
@@ -59,7 +59,7 @@ export class MainMenu extends Scene {
       .image(this.scale.width / 2, this.scale.height / 3, "loginButton")
       .setInteractive()
       .setScale(1)
-      .setVisible(false); // Hide by default, we decide after restore
+      .setVisible(false); // We'll show it if no session is restored
 
     this.loginButton.on("pointerdown", () => {
       this.handleMultiWalletLogin();
@@ -74,7 +74,7 @@ export class MainMenu extends Scene {
       .setScale(1.1)
       .setVisible(false);
 
-    // Bobbing tween
+    // Simple bobbing tween
     this.tweens.add({
       targets: this.freelanceButton,
       y: this.freelanceButton.y + 10,
@@ -84,7 +84,7 @@ export class MainMenu extends Scene {
       ease: "Sine.easeInOut",
     });
 
-    // NOTE: Pass the userName to the Game scene
+    // When clicked => pass userName to Game scene
     this.freelanceButton.on("pointerdown", () => {
       if (!this.userName) {
         console.warn("No userName found, cannot pass to Game scene!");
@@ -113,6 +113,29 @@ export class MainMenu extends Scene {
 
     this.standingsButton.on("pointerdown", () => {
       this.scene.start("Standings");
+    });
+
+    //---------------------------------------------------------------------
+    // 4c) STAKING BUTTON => only visible if logged in
+    //---------------------------------------------------------------------
+    this.stakingButton = this.add
+      .image(this.scale.width / 2, this.scale.height / 1.3, "stakingButton")
+      .setInteractive()
+      .setScale(1.1)
+      .setVisible(false);
+
+    this.tweens.add({
+      targets: this.stakingButton,
+      y: this.stakingButton.y + 10,
+      yoyo: true,
+      repeat: -1,
+      duration: 800,
+      ease: "Sine.easeInOut",
+    });
+
+    // On click => go to a scene named "StakingUI" (be sure you have created it)
+    this.stakingButton.on("pointerdown", () => {
+      this.scene.start("StakingUI");
     });
 
     //---------------------------------------------------------------------
@@ -157,7 +180,6 @@ export class MainMenu extends Scene {
         new WalletPluginCloudWallet(),
         new WalletPluginWombat(),
       ],
-      // By default, it uses BrowserLocalStorage to store sessions
     });
 
     // Track user data
@@ -195,7 +217,7 @@ export class MainMenu extends Scene {
       this.userName = actorName.toString();
       console.log("Session restored => userName =", this.userName);
 
-      // Check NFT
+      // Check if user has the required NFT
       const ownsNFT = await this.checkUserHasNFT(this.userName);
       if (!ownsNFT) {
         alert(
@@ -203,7 +225,7 @@ export class MainMenu extends Scene {
             "Buy one here:\n" +
             "https://wax.atomichub.io/market?primary_chain=wax-mainnet&collection_name=undeadpinups&blockchain=wax-mainnet&order=desc&sort=created#sales"
         );
-        // If user lacks NFT, remain logged in, but no "Begin" button
+        // If user lacks NFT, remain logged in but no "Begin" button
         this.loginButton.setVisible(false);
         return;
       }
@@ -246,14 +268,17 @@ export class MainMenu extends Scene {
 
         const actorName = this.session.permissionLevel?.actor;
         if (!actorName) {
-          console.error("No actor found in session.permissionLevel =>", this.session.permissionLevel);
+          console.error(
+            "No actor found in session.permissionLevel =>",
+            this.session.permissionLevel
+          );
           return;
         }
 
         this.userName = actorName.toString();
         console.log("Multi-Wallet login success =>", this.userName);
 
-        // Check NFT
+        // Check if user has the required NFT
         const ownsNFT = await this.checkUserHasNFT(this.userName);
         if (!ownsNFT) {
           alert(
@@ -294,6 +319,7 @@ export class MainMenu extends Scene {
         return false;
       }
 
+      // See if any template_id is in REQUIRED_TEMPLATE_IDS
       return data.data.some((asset) => {
         const tid = parseInt(asset.template?.template_id);
         return REQUIRED_TEMPLATE_IDS.includes(tid);
@@ -305,12 +331,13 @@ export class MainMenu extends Scene {
   }
 
   // ----------------------------------------------------------------
-  // (D) SHOW LOGGED IN UI => Hide login, show freelance + top bar
+  // (D) SHOW LOGGED IN UI => Hide login, show buttons & top bar
   // ----------------------------------------------------------------
   showLoggedInUI() {
     this.loginButton.setVisible(false);
     this.freelanceButton.setVisible(true);
     this.standingsButton.setVisible(true);
+    this.stakingButton.setVisible(true); // <--- Show the new staking button
     this.topBar.setVisible(true);
     this.userText.setVisible(true);
     this.logoutText.setVisible(true);
@@ -328,6 +355,7 @@ export class MainMenu extends Scene {
       console.error("Error logging out:", err);
     }
 
+    // Reset user data + hide everything
     this.session = null;
     this.userName = null;
 
@@ -336,6 +364,7 @@ export class MainMenu extends Scene {
     this.logoutText.setVisible(false);
     this.freelanceButton.setVisible(false);
     this.standingsButton.setVisible(false);
+    this.stakingButton.setVisible(false);
     this.loginButton.setVisible(true);
   }
 }

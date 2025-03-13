@@ -12,13 +12,13 @@ import { WalletPluginWombat } from "@wharfkit/wallet-plugin-wombat";
 
 const WAX_CHAINS = [
   {
-    id: "1064487b3cd1f44d82c42c1ec67a7e9e66aeb51fd6aa7666b56fdd39c3a2df94",
-    url: "https://wax.greymass.com"
+    id: "1064487b3cd1f44d82c42c1ec67a7e9e66aeb51fd6aa7666b56fdd39c3a2df94", // Cloud ID
+    url: "https://wax.cryptolions.io"
   },
   {
-    id: "1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4",
-    url: "https://wax.greymass.com"
-  },
+    id: "1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4", // Anchor ID
+    url: "https://wax.cryptolions.io"
+  }
 ];
 
 const CONTRACT_ACCOUNT = "wynxcbyte.gm";

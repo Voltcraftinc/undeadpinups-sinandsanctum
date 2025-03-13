@@ -18,12 +18,12 @@ const WAX_CHAINS = [
   {
     // Cloud Wallet chain ID
     id: "1064487b3cd1f44d82c42c1ec67a7e9e66aeb51fd6aa7666b56fdd39c3a2df94",
-    url: "https://wax.greymass.com",
+    url: "https://wax.cryptolions.io"
   },
   {
     // Anchor/Wombat chain ID
     id: "1064487b3cd1a897ce03ae5b6a865651747e2e152090f99c1d19d44e01aea5a4",
-    url: "https://wax.greymass.com",
+    url: "https://wax.cryptolions.io"
   },
 ];
 

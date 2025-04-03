@@ -24,7 +24,7 @@ export class Game extends Scene {
     ///////////////////////////////////////////////////////////////////////////
     this.playerDead = false
     this.drops = []
-    this.wynxCollected = 0 // track how many WYNX tokens the player picks up
+    this.sireCollected = 0 // track how many SIRE tokens the player picks up
 
     ///////////////////////////////////////////////////////////////////////////
     // AUDIO
@@ -140,8 +140,7 @@ export class Game extends Scene {
     ///////////////////////////////////////////////////////////////////////////
     // UI & WAVES
     ///////////////////////////////////////////////////////////////////////////
-    this.createPlayerSoulUI()
-    this.createKillsUI()
+    this.createHUD()
     this.initWaveSystem()
   }
 
@@ -283,6 +282,9 @@ export class Game extends Scene {
     this.updateZombies(dt)
     this.checkProjectileHits()
     this.handleSectionTransition()
+    
+    // Update HUD pulse effect
+    this.updateHUDEffects(time)
   }
 
   ///////////////////////////////////////////////////////////////////////////
@@ -300,12 +302,18 @@ export class Game extends Scene {
         if (d.isSoul) {
           console.log('Picked up Soul => +25')
           this.playerSoul = Math.min(this.playerSoul + 25, 100)
-          this.updatePlayerSoulUI()
+          this.updateHUD()
+          
+          // Flash the soul meter when collected
+          this.flashSoulMeter()
         }
-        // WYNX => increment
-        else if (d.isWynx) {
-          console.log('Picked up WYNX => +1')
-          this.wynxCollected++
+        // SIRE => increment
+        else if (d.isSire) {
+          console.log('Picked up SIRE => +1')
+          this.sireCollected++
+          
+          // Flash the sire counter
+          this.flashSireCounter()
         }
         // Destroy
         d.shadow.destroy()
@@ -428,40 +436,185 @@ export class Game extends Scene {
   }
 
   ///////////////////////////////////////////////////////////////////////////
-  // UI
+  // UI (SEGA-STYLE HUD)
   ///////////////////////////////////////////////////////////////////////////
   playerSoul = 100
   kills = 0
 
-  createPlayerSoulUI() {
-    this.soulBg = this.add
-      .rectangle(10, 10, 200, 20, 0x000000)
-      .setOrigin(0)
-      .setDepth(9999)
-    this.soulFill = this.add
-      .rectangle(10, 10, 200, 20, 0xff0000)
-      .setOrigin(0)
-      .setDepth(9999)
-    this.soulText = this.add
-      .text(12, 12, 'Soul: 100%', { fontSize: '14px', color: '#ffffff' })
-      .setDepth(9999)
-  }
-  updatePlayerSoulUI() {
-    if (this.playerSoul < 0) this.playerSoul = 0
-    if (this.playerSoul > 100) this.playerSoul = 100
-    const ratio = this.playerSoul / 100
-    this.soulFill.width = 200 * ratio
-    this.soulText.setText(`Soul: ${this.playerSoul}%`)
+  ///////////////////////////////////////////////////////////////////////////
+// HUD - CLEANER TOP BAR
+///////////////////////////////////////////////////////////////////////////
+playerSoul = 100;
+kills = 0;
+
+createHUD() {
+  // Create a container so we can manage all HUD elements together
+  this.hudContainer = this.add.container(0, 0).setDepth(10000);
+
+  // A dark background bar across the top
+  this.hudPanel = this.add
+    .rectangle(this.scale.width / 2, 25, this.scale.width, 50, 0x000000)
+    .setAlpha(0.8);
+
+  // Thin red border line
+  this.hudBorder = this.add.graphics();
+  this.hudBorder.lineStyle(2, 0x660000, 1);
+  this.hudBorder.strokeRect(
+    this.scale.width / 2 - this.scale.width / 2,
+    0,
+    this.scale.width,
+    50
+  );
+
+  // 1) Soul label + bar (left side)
+  this.soulLabel = this.add.text(20, 10, "SOUL", {
+    fontFamily: "Arial Black",
+    fontSize: "16px",
+    color: "#ff0000",
+    stroke: "#000000",
+    strokeThickness: 3,
+  });
+
+  // Soul bar background
+  this.soulBg = this.add.rectangle(90, 25, 150, 15, 0x330000).setOrigin(0, 0.5);
+  this.soulBg.setStrokeStyle(1, 0x550000);
+
+  // Soul bar fill
+  this.soulFill = this.add.rectangle(90, 25, 150, 15, 0xff0000).setOrigin(0, 0.5);
+
+  // 2) Kills label + value (left-center)
+  this.killsLabel = this.add.text(260, 10, "KILLS", {
+    fontFamily: "Arial Black",
+    fontSize: "16px",
+    color: "#00ff00",
+    stroke: "#000000",
+    strokeThickness: 3,
+  });
+
+  this.killsValue = this.add.text(320, 10, "0", {
+    fontFamily: "Arial Black",
+    fontSize: "18px",
+    color: "#00ff00",
+    stroke: "#000000",
+    strokeThickness: 3,
+  });
+
+  // 3) SIRE icon + counter (center)
+  this.sireIcon = this.add.sprite(this.scale.width / 2 - 20, 25, "sire-token").setScale(0.6);
+  this.sireValue = this.add.text(this.scale.width / 2 + 10, 15, "× 0", {
+    fontFamily: "Arial Black",
+    fontSize: "16px",
+    color: "#33ccff",
+    stroke: "#000000",
+    strokeThickness: 3,
+  }).setOrigin(0, 0);
+
+  // 4) Wave label + value (right side)
+  this.waveLabel = this.add.text(this.scale.width - 120, 10, "WAVE", {
+    fontFamily: "Arial Black",
+    fontSize: "16px",
+    color: "#ffff00",
+    stroke: "#000000",
+    strokeThickness: 3,
+  });
+
+  this.waveValue = this.add.text(this.scale.width - 60, 10, "1", {
+    fontFamily: "Arial Black",
+    fontSize: "18px",
+    color: "#ffff66",
+    stroke: "#000000",
+    strokeThickness: 3,
+  });
+
+  // Add all to the container
+  this.hudContainer.add([
+    this.hudPanel,
+    this.hudBorder,
+    this.soulLabel,
+    this.soulBg,
+    this.soulFill,
+    this.killsLabel,
+    this.killsValue,
+    this.sireIcon,
+    this.sireValue,
+    this.waveLabel,
+    this.waveValue,
+  ]);
+
+  // Initial update
+  this.updateHUD();
+}
+
+updateHUD() {
+  // Clamp playerSoul
+  if (this.playerSoul < 0) this.playerSoul = 0;
+  if (this.playerSoul > 100) this.playerSoul = 100;
+
+  // Update soul bar fill width
+  const ratio = this.playerSoul / 100;
+  this.soulFill.displayWidth = 150 * ratio;
+
+  // Color changes for low soul
+  if (this.playerSoul < 25) {
+    this.soulFill.fillColor = 0xff0000; // bright red
+    this.pulseRate = 200;
+  } else if (this.playerSoul < 50) {
+    this.soulFill.fillColor = 0xdd3300;
+    this.pulseRate = 400;
+  } else {
+    this.soulFill.fillColor = 0xbb0000;
+    this.pulseRate = 600;
   }
 
-  createKillsUI() {
-    this.killsText = this.add
-      .text(12, 34, 'Kills: 0', { fontSize: '14px', color: '#00ff00' })
-      .setDepth(9999)
+  // Update kills
+  this.killsValue.setText(this.kills.toString());
+
+  // Update wave
+  this.waveValue.setText(this.waveNumber.toString());
+
+  // Update SIRE
+  this.sireValue.setText(`× ${this.sireCollected}`);
+}
+
+updateHUDEffects(time) {
+  // Pulse soul bar if low
+  if (this.playerSoul < 25) {
+    const pulse = Math.sin(time / this.pulseRate) * 0.2 + 0.8;
+    this.soulFill.setAlpha(pulse);
+    this.soulLabel.setAlpha(pulse);
+  } else {
+    this.soulFill.setAlpha(1);
+    this.soulLabel.setAlpha(1);
   }
-  updateKillsUI() {
-    this.killsText.setText(`Kills: ${this.kills}`)
-  }
+}
+
+flashSoulMeter() {
+  this.tweens.add({
+    targets: [this.soulFill],
+    alpha: { from: 1, to: 0.2 },
+    duration: 100,
+    yoyo: true,
+    repeat: 3,
+  });
+  this.tweens.add({
+    targets: this.soulLabel,
+    scale: { from: 1, to: 1.2 },
+    duration: 100,
+    yoyo: true,
+    repeat: 3,
+  });
+}
+
+flashWynxCounter() {
+  this.tweens.add({
+    targets: [this.sireIcon, this.sireValue],
+    scale: { from: 1, to: 1.3 },
+    duration: 150,
+    yoyo: true,
+    repeat: 2,
+  });
+}
+
 
   ///////////////////////////////////////////////////////////////////////////
   // WAVES
@@ -476,9 +629,9 @@ export class Game extends Scene {
   initWaveSystem() {
     console.log('[initWaveSystem] called ONCE')
     this.playerSoul = 100
-    this.updatePlayerSoulUI()
+    this.updateHUD()
     this.kills = 0
-    this.updateKillsUI()
+    this.updateHUD()
     this.waveNumber = 1
     this.startWave()
   }
@@ -504,6 +657,15 @@ export class Game extends Scene {
     console.log(
       `Spawning wave #${this.waveNumber} => waveIndex=${waveIndex}, waveCycle=${waveCycle}, bars=${waveBars}, speed=${waveSpeed}`
     )
+    
+    // Flash the wave indicator when a new wave starts
+    this.tweens.add({
+      targets: [this.waveLabel, this.waveValue],
+      alpha: { from: 1, to: 0.2 },
+      duration: 100,
+      yoyo: true,
+      repeat: 5
+    });
 
     for (let i = 0; i < waveIndex; i++) {
       this.time.delayedCall(2000 * i, () => {
@@ -539,13 +701,21 @@ export class Game extends Scene {
     z.isDead = false
     z.isAttacking = false
 
-    // HP bar
+    // HP bar - styled
     z.healthBg = this.add
-      .rectangle(z.x - 20, z.y - 40, 40, 5, 0x000000)
-      .setDepth(9999)
+      .rectangle(z.x - 20, z.y - 45, 40, 6, 0x000000)
+      .setStrokeStyle(1, 0x333333)
+      .setDepth(9999);
+      
     z.healthFill = this.add
-      .rectangle(z.x - 20, z.y - 40, 40, 5, 0xff0000)
-      .setDepth(9999)
+      .rectangle(z.x - 20, z.y - 45, 40, 6, 0xaa0000)
+      .setDepth(9999);
+      
+    // Add shine effect to zombie's health bar
+    z.healthShine = this.add
+      .rectangle(z.x - 20, z.y - 47, 40, 2, 0xff3333)
+      .setAlpha(0.4)
+      .setDepth(9999);
 
     this.time.delayedCall(1000, () => {
       if (!z.isDead) {
@@ -573,20 +743,30 @@ export class Game extends Scene {
           }
           z.healthBg.destroy()
           z.healthFill.destroy()
+          z.healthShine.destroy()
           z.destroy()
           this.zombies.splice(i, 1)
 
           this.waveZombiesLeft--
           this.kills++
-          this.updateKillsUI()
+          this.updateHUD()
+          
+          // Flash the kills counter when a zombie is killed
+          this.tweens.add({
+            targets: this.killsValue,
+            scale: { from: 1, to: 1.3 },
+            duration: 100,
+            yoyo: true,
+            repeat: 1
+          });
 
           // Drops
           const dropChance = Phaser.Math.Between(1, 1000)
           if (dropChance <= 5) {
-            // WYNX
-            const wynx = this.add.sprite(z.x, z.y, 'wynx-token').setDepth(9999)
-            wynx.isWynx = true
-            this.makeDropFloat(wynx)
+            // SIRE
+            const sire = this.add.sprite(z.x, z.y, 'sire-token').setDepth(9999)
+            sire.isSire = true
+            this.makeDropFloat(sire)
           } else if (dropChance <= 55) {
             // soul
             const soul = this.add
@@ -612,14 +792,20 @@ export class Game extends Scene {
         continue
       }
 
-      // HP bar
-      z.healthBg.x = z.x - 20
-      z.healthBg.y = z.y - 40
-      z.healthFill.x = z.x - 20
-      z.healthFill.y = z.y - 40
+      // HP bar - updated with better positioning and styling
       const maxBars = 8
       const ratio = z.bars / maxBars
+      
+      z.healthBg.x = z.x
+      z.healthBg.y = z.y - 45
+      
       z.healthFill.width = 40 * ratio
+      z.healthFill.x = z.x - (40 - z.healthFill.width) / 2
+      z.healthFill.y = z.y - 45
+      
+      z.healthShine.width = 40 * ratio
+      z.healthShine.x = z.healthFill.x
+      z.healthShine.y = z.y - 47
 
       // chase
       if (!z.isAttacking) {
@@ -632,145 +818,216 @@ export class Game extends Scene {
         z.flipX = z.x > this.player.x
       }
 
-      // if close => attack
-      const dist = Phaser.Math.Distance.Between(z.x, z.y, this.player.x, this.player.y)
-      if (dist < 40 && !z.isAttacking) {
-        if (!z.scene || !z.anims) continue
+    // if close => attack
+    const dist = Phaser.Math.Distance.Between(z.x, z.y, this.player.x, this.player.y)
+    if (dist < 40 && !z.isAttacking) {
+      if (!z.scene || !z.anims) continue
 
-        z.isAttacking = true
-        z.play(`Zombie${z.type}_Attack`)
-        z.once('animationcomplete', () => {
-          if (!z.isDead && !this.playerDead && this.playerSoul > 0) {
-            this.playerSoul -= z.damage
-            if (this.playerSoul < 0) this.playerSoul = 0
-            this.updatePlayerSoulUI()
+      z.isAttacking = true
+      z.play(`Zombie${z.type}_Attack`)
+      z.once('animationcomplete', () => {
+        if (!z.isDead && !this.playerDead && this.playerSoul > 0) {
+          this.playerSoul -= z.damage
+          if (this.playerSoul < 0) this.playerSoul = 0
+          this.updateHUD()
+          
+          // Camera shake when taking damage
+          this.cameras.main.shake(200, 0.005);
+          
+          // Flash the soul bar red when taking damage
+          this.tweens.add({
+            targets: [this.soulFill],
+            alpha: { from: 1, to: 0.2 },
+            duration: 100,
+            yoyo: true,
+            repeat: 2
+          });
 
-            z.isAttacking = false
-            if (!z.isDead) {
-              z.play(`Zombie${z.type}_Walk`)
-            }
+          z.isAttacking = false
+          if (!z.isDead) {
+            z.play(`Zombie${z.type}_Walk`)
+          }
 
-            // If soul=0 => player dead anim
-            if (this.playerSoul <= 0 && !this.playerDead) {
-              console.log('Player soul=0 => play Player_Dead anim...')
-              this.playerDead = true
-              this.player.play('Player_Dead')
+          // If soul=0 => player dead anim
+          if (this.playerSoul <= 0 && !this.playerDead) {
+            console.log('Player soul=0 => play Player_Dead anim...')
+            this.playerDead = true
+            this.player.play('Player_Dead')
+            
+            // Darken the screen when player dies
+            this.add.rectangle(
+              this.scale.width/2, 
+              this.scale.height/2, 
+              this.scale.width, 
+              this.scale.height, 
+              0x000000
+            ).setAlpha(0).setDepth(9998)
+            .setAlpha(0)
+            .setDepth(9998);
+            
+            this.tweens.add({
+              targets: this.cameras.main,
+              zoom: 1.2,
+              duration: 1000,
+              ease: 'Sine.easeInOut'
+            });
 
-              // Once anim done => fade out => pass data to GameOver
-              this.player.once('animationcomplete', () => {
-                this.cameras.main.fadeOut(1000, 0, 0, 0)
-                this.cameras.main.once('camerafadeoutcomplete', () => {
-                  this.scene.start('GameOver', {
-                    waxAccount: this.waxAccount,
-                    kills: this.kills,
-                    waveReached: this.waveNumber,
-                    wynxEarned: this.wynxCollected,
-                    // you can pass more fields if you want
-                  })
+            // Once anim done => fade out => pass data to GameOver
+            this.player.once('animationcomplete', () => {
+              this.cameras.main.fadeOut(1000, 0, 0, 0)
+              this.cameras.main.once('camerafadeoutcomplete', () => {
+                this.scene.start('GameOver', {
+                  waxAccount: this.waxAccount,
+                  kills: this.kills,
+                  waveReached: this.waveNumber,
+                  sireEarned: this.sireCollected,
+                  // you can pass more fields if you want
                 })
               })
-            }
-          }
-        })
-      }
-    }
-  }
-
-  checkProjectileHits() {
-    if (!this.scene.isActive()) return
-
-    for (let i = this.bloodProjectiles.length - 1; i >= 0; i--) {
-      const p = this.bloodProjectiles[i]
-      for (let z of this.zombies) {
-        if (!z || !z.anims || z.isDead) continue
-
-        const dist = Phaser.Math.Distance.Between(p.x, p.y, z.x, z.y)
-        if (dist < 30) {
-          p.destroy()
-          this.bloodProjectiles.splice(i, 1)
-
-          z.bars--
-          z.play(`Zombie${z.type}_Hurt`)
-          Phaser.Utils.Array.GetRandom(this.zombieHurtSounds).play()
-
-          if (z.bars <= 0) {
-            z.isDead = true
-            z.play(`Zombie${z.type}_Dead`)
-          } else {
-            this.time.delayedCall(300, () => {
-              if (!z.isDead && !z.isAttacking && z.anims) {
-                z.play(`Zombie${z.type}_Walk`)
-              }
             })
           }
-          break
         }
-      }
-    }
-  }
-
-  stageTransitioning = false
-
-  handleSectionTransition() {
-    if (!this.waveDone) {
-      if (this.player.x >= 1000) {
-        this.player.x = 1000
-      }
-      return
-    }
-
-    if (this.player.x >= 1000 && !this.stageTransitioning) {
-      this.goSign.setVisible(false)
-      this.goSignTween.pause()
-      this.goSign.setAlpha(1)
-
-      this.stageTransitioning = true
-      console.log(
-        `[handleSectionTransition] wave #${this.waveNumber} done => shifting left => waveNumber++ => ${
-          this.waveNumber + 1
-        }`
-      )
-      this.player.x = 1000
-
-      const shift = this.sectionWidth
-      this.currentSection = (this.currentSection + 1) % this.totalSections
-
-      // keep them on top
-      this.background1.setDepth(-9999)
-      this.background2.setDepth(-9999)
-      this.player.setDepth(9999)
-      this.bloodProjectiles.forEach((b) => b.setDepth(9999))
-      this.zombies.forEach((z) => z.setDepth(9999))
-      this.drops.forEach((d) => d.setDepth(9999))
-      if (this.goSign) this.goSign.setDepth(9999)
-
-      this.tweens.add({
-        targets: [
-          this.background1,
-          this.background2,
-          this.player,
-          ...this.bloodProjectiles,
-          ...this.zombies,
-          ...this.drops,
-        ],
-        x: (target) => target.x - shift,
-        duration: 1000,
-        ease: 'Sine.easeInOut',
-        onUpdate: () => {
-          if (this.background1.x <= -7335) {
-            this.background1.x = this.background2.x + 7335
-          }
-          if (this.background2.x <= -7335) {
-            this.background2.x = this.background1.x + 7335
-          }
-        },
-        onComplete: () => {
-          this.waveNumber++
-          this.waveDone = false
-          this.startWave()
-          this.stageTransitioning = false
-        },
       })
     }
   }
+}
+
+checkProjectileHits() {
+  if (!this.scene.isActive()) return
+
+  for (let i = this.bloodProjectiles.length - 1; i >= 0; i--) {
+    const p = this.bloodProjectiles[i]
+    for (let z of this.zombies) {
+      if (!z || !z.anims || z.isDead) continue
+
+      const dist = Phaser.Math.Distance.Between(p.x, p.y, z.x, z.y)
+      if (dist < 30) {
+        // Add hit effect
+        const hitEffect = this.add.sprite(p.x, p.y, 'Blood_Charge')
+          .setScale(1.5)
+          .setAlpha(0.7)
+          .setDepth(9998);
+          
+        this.tweens.add({
+          targets: hitEffect,
+          scale: 0.1,
+          alpha: 0,
+          duration: 300,
+          onComplete: () => hitEffect.destroy()
+        });
+        
+        p.destroy()
+        this.bloodProjectiles.splice(i, 1)
+
+        z.bars--
+        z.play(`Zombie${z.type}_Hurt`)
+        Phaser.Utils.Array.GetRandom(this.zombieHurtSounds).play()
+        
+        // Flash zombie when hit
+        this.tweens.add({
+          targets: z,
+          alpha: 0.5,
+          duration: 50,
+          yoyo: true,
+          repeat: 2
+        });
+
+        if (z.bars <= 0) {
+          z.isDead = true
+          z.play(`Zombie${z.type}_Dead`)
+        } else {
+          this.time.delayedCall(300, () => {
+            if (!z.isDead && !z.isAttacking && z.anims) {
+              z.play(`Zombie${z.type}_Walk`)
+            }
+          })
+        }
+        break
+      }
+    }
+  }
+}
+
+stageTransitioning = false
+
+handleSectionTransition() {
+  if (!this.waveDone) {
+    if (this.player.x >= 1000) {
+      this.player.x = 1000
+    }
+    return
+  }
+
+  if (this.player.x >= 1000 && !this.stageTransitioning) {
+    this.goSign.setVisible(false)
+    this.goSignTween.pause()
+    this.goSign.setAlpha(1)
+
+    this.stageTransitioning = true
+    console.log(
+      `[handleSectionTransition] wave #${this.waveNumber} done => shifting left => waveNumber++ => ${
+        this.waveNumber + 1
+      }`
+    )
+    this.player.x = 1000
+
+    const shift = this.sectionWidth
+    this.currentSection = (this.currentSection + 1) % this.totalSections
+
+    // keep them on top
+    this.background1.setDepth(-9999)
+    this.background2.setDepth(-9999)
+    this.player.setDepth(9999)
+    this.bloodProjectiles.forEach((b) => b.setDepth(9999))
+    this.zombies.forEach((z) => z.setDepth(9999))
+    this.drops.forEach((d) => d.setDepth(9999))
+    if (this.goSign) this.goSign.setDepth(9999)
+    
+    // Add a transition effect - screen flash
+    const flash = this.add.rectangle(
+      this.scale.width/2, 
+      this.scale.height/2, 
+      this.scale.width, 
+      this.scale.height, 
+      0xffffff
+    ).setAlpha(0).setDepth(10001);
+    
+    this.tweens.add({
+      targets: flash,
+      alpha: 0.3,
+      duration: 100,
+      yoyo: true,
+      onComplete: () => flash.destroy()
+    });
+
+    this.tweens.add({
+      targets: [
+        this.background1,
+        this.background2,
+        this.player,
+        ...this.bloodProjectiles,
+        ...this.zombies,
+        ...this.drops,
+      ],
+      x: (target) => target.x - shift,
+      duration: 1000,
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        if (this.background1.x <= -7335) {
+          this.background1.x = this.background2.x + 7335
+        }
+        if (this.background2.x <= -7335) {
+          this.background2.x = this.background1.x + 7335
+        }
+      },
+      onComplete: () => {
+        this.waveNumber++
+        this.updateHUD(); // Update the wave counter in the HUD
+        this.waveDone = false
+        this.startWave()
+        this.stageTransitioning = false
+      },
+    })
+  }
+}
 }

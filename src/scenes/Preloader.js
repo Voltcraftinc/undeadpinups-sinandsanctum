@@ -16,6 +16,7 @@ export class Preloader extends Scene {
     this.load.image("background", "assets/streetdesign.png");
     this.load.audio("backgroundMusic", "assets/starlighthollow-mellow.mp3");
     this.load.image("undeadpinups-ss-logo", "assets/udpu-ss-logo.png");
+    this.load.image("top-hud-bar", "assets/top-hud-bar.png");
     this.load.audio("clickSound", "assets/clicksound.wav");
 
     this.load.image("muteButton", "assets/mute.png");

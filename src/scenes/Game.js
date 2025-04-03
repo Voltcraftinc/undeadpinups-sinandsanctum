@@ -40,7 +40,7 @@ export class Game extends Scene {
     // GO SIGN
     ///////////////////////////////////////////////////////////////////////////
     this.goSign = this.add
-      .image(this.scale.width - 100, this.scale.height / 2, 'goSign')
+      .image(this.scale.width - 150, this.scale.height / 2, 'goSign')
       .setDepth(9999)
       .setVisible(false)
 
@@ -451,47 +451,43 @@ createHUD() {
   // Create a container so we can manage all HUD elements together
   this.hudContainer = this.add.container(0, 0).setDepth(10000);
 
-  // A dark background bar across the top
-  this.hudPanel = this.add
-    .rectangle(this.scale.width / 2, 25, this.scale.width, 50, 0x000000)
-    .setAlpha(0.8);
+  // Use the "top-hud-bar" image as the background bar, scaled to full width
+  const hudImage = this.textures.get('top-hud-bar').getSourceImage();
+  const scaleFactor = this.scale.width / hudImage.width;
+  this.hudPanel = this.add.image(0, 0, 'top-hud-bar')
+    .setOrigin(0, 0)
+    .setScale(scaleFactor);
 
-  // Thin red border line
+  // No border drawn, or keep it at zero thickness
   this.hudBorder = this.add.graphics();
-  this.hudBorder.lineStyle(2, 0x660000, 1);
-  this.hudBorder.strokeRect(
-    this.scale.width / 2 - this.scale.width / 2,
-    0,
-    this.scale.width,
-    50
-  );
+  // this.hudBorder.lineStyle(0, 0x000000, 0); // effectively invisible
 
-  // 1) Soul label + bar (left side)
-  this.soulLabel = this.add.text(20, 10, "SOUL", {
+  // 1) SOUL label + bar
+  // Position label slightly higher than the bar so it doesn't overlap
+  this.soulLabel = this.add.text(100, 30, "SOUL", {
     fontFamily: "Arial Black",
     fontSize: "16px",
     color: "#ff0000",
     stroke: "#000000",
     strokeThickness: 3,
   });
+  this.soulBg = this.add
+    .rectangle(160, 41, 150, 15, 0x330000)
+    .setOrigin(0, 0.5)
+    .setStrokeStyle(1, 0x550000);
+  this.soulFill = this.add
+    .rectangle(160, 41, 150, 15, 0xff0000)
+    .setOrigin(0, 0.5);
 
-  // Soul bar background
-  this.soulBg = this.add.rectangle(90, 25, 150, 15, 0x330000).setOrigin(0, 0.5);
-  this.soulBg.setStrokeStyle(1, 0x550000);
-
-  // Soul bar fill
-  this.soulFill = this.add.rectangle(90, 25, 150, 15, 0xff0000).setOrigin(0, 0.5);
-
-  // 2) Kills label + value (left-center)
-  this.killsLabel = this.add.text(260, 10, "KILLS", {
+  // 2) KILLS label + value
+  this.killsLabel = this.add.text(350, 30, "SLAYS", {
     fontFamily: "Arial Black",
     fontSize: "16px",
     color: "#00ff00",
     stroke: "#000000",
     strokeThickness: 3,
   });
-
-  this.killsValue = this.add.text(320, 10, "0", {
+  this.killsValue = this.add.text(420, 30, "0", {
     fontFamily: "Arial Black",
     fontSize: "18px",
     color: "#00ff00",
@@ -499,9 +495,10 @@ createHUD() {
     strokeThickness: 3,
   });
 
-  // 3) SIRE icon + counter (center)
-  this.sireIcon = this.add.sprite(this.scale.width / 2 - 20, 25, "sire-token").setScale(0.6);
-  this.sireValue = this.add.text(this.scale.width / 2 + 10, 15, "× 0", {
+  // 3) SIRE icon + counter (centered-ish)
+  this.sireIcon = this.add.sprite(this.scale.width / 2 - 20, 40, "sire-token")
+    .setScale(0.6);
+  this.sireValue = this.add.text(this.scale.width / 2 + 10, 30, "× 0", {
     fontFamily: "Arial Black",
     fontSize: "16px",
     color: "#33ccff",
@@ -509,27 +506,25 @@ createHUD() {
     strokeThickness: 3,
   }).setOrigin(0, 0);
 
-  // 4) Wave label + value (right side)
-  this.waveLabel = this.add.text(this.scale.width - 120, 10, "WAVE", {
+  // 4) WAVE label + value (far right)
+  this.waveLabel = this.add.text(this.scale.width - 200, 30, "WAVE", {
     fontFamily: "Arial Black",
     fontSize: "16px",
     color: "#ffff00",
     stroke: "#000000",
     strokeThickness: 3,
   });
-
-  this.waveValue = this.add.text(this.scale.width - 60, 10, "1", {
+  this.waveValue = this.add.text(this.scale.width - 140, 27, "1", {
     fontFamily: "Arial Black",
-    fontSize: "18px",
+    fontSize: "25px",
     color: "#ffff66",
     stroke: "#000000",
     strokeThickness: 3,
   });
 
-  // Add all to the container
+  // 5) Add everything to the container
   this.hudContainer.add([
     this.hudPanel,
-    this.hudBorder,
     this.soulLabel,
     this.soulBg,
     this.soulFill,
@@ -541,9 +536,12 @@ createHUD() {
     this.waveValue,
   ]);
 
-  // Initial update
+  // Initial update of HUD values
   this.updateHUD();
 }
+
+
+
 
 updateHUD() {
   // Clamp playerSoul

@@ -4,44 +4,16 @@
     "types": [],
     "structs": [
         {
-            "name": "asset_row",
+            "name": "addtemplate",
             "base": "",
             "fields": [
                 {
-                    "name": "asset_id",
+                    "name": "template_id",
                     "type": "uint64"
                 },
                 {
-                    "name": "owner",
-                    "type": "name"
-                },
-                {
-                    "name": "collection_name",
-                    "type": "name"
-                },
-                {
-                    "name": "schema_name",
-                    "type": "name"
-                },
-                {
-                    "name": "template_id",
-                    "type": "int32"
-                },
-                {
-                    "name": "ram_payer",
-                    "type": "name"
-                },
-                {
-                    "name": "backed_tokens",
-                    "type": "asset[]"
-                },
-                {
-                    "name": "immutable_serialized_data",
-                    "type": "bytes"
-                },
-                {
-                    "name": "mutable_serialized_data",
-                    "type": "bytes"
+                    "name": "hourly_rate",
+                    "type": "uint64"
                 }
             ]
         },
@@ -55,6 +27,52 @@
                 },
                 {
                     "name": "asset_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "config",
+            "base": "",
+            "fields": [
+                {
+                    "name": "token_contract",
+                    "type": "name"
+                },
+                {
+                    "name": "atomicassets_contract",
+                    "type": "name"
+                },
+                {
+                    "name": "collection_name",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "init",
+            "base": "",
+            "fields": [
+                {
+                    "name": "token_contract",
+                    "type": "name"
+                },
+                {
+                    "name": "atomicassets_contract",
+                    "type": "name"
+                },
+                {
+                    "name": "collection_name",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "rmtemplate",
+            "base": "",
+            "fields": [
+                {
+                    "name": "template_id",
                     "type": "uint64"
                 }
             ]
@@ -87,7 +105,7 @@
                 },
                 {
                     "name": "template_id",
-                    "type": "uint64"
+                    "type": "int32"
                 },
                 {
                     "name": "staked_at",
@@ -96,6 +114,20 @@
                 {
                     "name": "last_claimed",
                     "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "template_info",
+            "base": "",
+            "fields": [
+                {
+                    "name": "template_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "hourly_rate",
+                    "type": "uint64"
                 }
             ]
         },
@@ -116,8 +148,23 @@
     ],
     "actions": [
         {
+            "name": "addtemplate",
+            "type": "addtemplate",
+            "ricardian_contract": ""
+        },
+        {
             "name": "claim",
             "type": "claim",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "init",
+            "type": "init",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "rmtemplate",
+            "type": "rmtemplate",
             "ricardian_contract": ""
         },
         {
@@ -133,8 +180,8 @@
     ],
     "tables": [
         {
-            "name": "assets",
-            "type": "asset_row",
+            "name": "config",
+            "type": "config",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
@@ -142,6 +189,13 @@
         {
             "name": "stakes",
             "type": "stake_info",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "templates",
+            "type": "template_info",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
